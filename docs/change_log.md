@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-07-26 — Supplier pre-approval and Companies House follow-up
+
+- Invoice upload now presents a clear **You’re pre-approved!** message with the indicative financing offer.
+- Added a follow-up form for contact email, optional phone, company number, registered address, and director confirmation before offer acceptance.
+- Added Companies House enrichment through `CH_API_KEY`: missing UK registration data is resolved by number or company-name search, and active directors are retrieved to assist registration.
+- Persisted the confirmed supplier contact and registry details with accepted invoice applications.
+
 ## 2026-07-26 — Descriptive financing PDF filenames
 
 - Generated term sheets and financing contracts now use portable filenames containing the supplier slug, Factorio reference, generation date, and document type.

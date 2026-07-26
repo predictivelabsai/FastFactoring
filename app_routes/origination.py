@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import base64
 import html
@@ -174,17 +175,23 @@ def _create_demand(data: dict) -> int:
                     (invoice_number, seller_id, company_id, debtor_name, debtor_registration,
                      description, sector, amount, currency, issue_date, due_date,
                      payment_terms_days, status, risk_grade, supplier_name,
-                     supplier_registration, supplier_tax_id, supplier_bank_name,
+                     supplier_registration, supplier_registered_address,
+                     supplier_director_name, supplier_contact_email, supplier_contact_phone,
+                     supplier_tax_id, supplier_bank_name,
                      supplier_bank_account, supplier_iban, supplier_swift,
                      purchase_order_number, extraction_confidence, extraction_evidence)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'funding',%s,
-                        %s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
             """, (data["invoice_number"], seller[0], company[0], data["debtor_name"],
                   data.get("debtor_registration", ""), data.get("description", ""),
                   data.get("sector", "other"), data["amount"], data["currency"].upper(),
                   data["issue_date"], data["due_date"], terms, data["risk_grade"],
                   data.get("supplier_name", ""), data.get("supplier_registration", ""),
+                  data.get("supplier_registered_address", ""),
+                  data.get("supplier_director_name", ""),
+                  data.get("supplier_contact_email", ""),
+                  data.get("supplier_contact_phone", ""),
                   data.get("supplier_tax_id", ""), data.get("supplier_bank_name", ""),
                   data.get("supplier_bank_account", ""), data.get("supplier_iban", ""),
                   data.get("supplier_swift", ""), data.get("purchase_order_number", ""),
@@ -243,7 +250,29 @@ def _offer_html(extracted: dict) -> str:
     issues = extracted.get("issues") or []
     issue_html = ("<p class='text-xs text-amber-700'>Review: " +
                   html.escape("; ".join(map(str, issues))) + "</p>") if issues else ""
+    registration = html.escape(str(inv.get("supplier_registration") or ""))
+    address = html.escape(str(inv.get("supplier_registered_address") or ""))
+    directors = inv.get("supplier_directors") or []
+    director_options = "".join(
+        f"<option value='{html.escape(str(item.get('name') or ''))}'>"
+        f"{html.escape(str(item.get('name') or ''))}</option>"
+        for item in directors if isinstance(item, dict) and item.get("name")
+    )
+    company_note = ""
+    if inv.get("companies_house_verified"):
+        company_note = (
+            "<p class='text-xs text-green-700'>Companies House match found: "
+            f"<b>{html.escape(str(inv.get('companies_house_name') or supplier))}</b>"
+            f" ({registration}), status {html.escape(str(inv.get('companies_house_status') or '—'))}. "
+            "Please confirm these public registry details.</p>"
+        )
+    elif inv.get("companies_house_note"):
+        company_note = (
+            f"<p class='text-xs text-ink-muted'>{html.escape(str(inv['companies_house_note']))}</p>"
+        )
     return (
+        "<h3 style='font-size:22px;font-weight:700;color:#1F5D43;margin:0 0 8px'>"
+        "You’re pre-approved!</h3>"
         f"<p>I extracted invoice <b>{invoice}</b> for <b>{supplier}</b>. "
         "Here is your indicative financing offer:</p>"
         "<table class='offer-table'>"
@@ -267,6 +296,24 @@ def _offer_html(extracted: dict) -> str:
         "<button class='offer-action secondary' onclick=\"document.getElementById('cp-bank-file').click()\">"
         "Upload bank statements (optional)</button>"
         "<button class='offer-action secondary' onclick='fcConnectBank()'>Connect bank (optional)</button>"
+        "<div style='margin-top:16px;padding:14px;background:#fff;border:1px solid #E3DFD2;border-radius:12px'>"
+        "<p><b>We just need a few additional details</b></p>"
+        "<p class='text-xs text-ink-muted'>Add a contact email and confirm the company details below. "
+        "This does not change your indicative offer.</p>"
+        f"{company_note}"
+        "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px'>"
+        "<label>Contact email<input id='supplier-contact-email' type='email' required "
+        "class='chat-input' style='width:100%;margin-top:4px' placeholder='finance@company.com'></label>"
+        "<label>Contact phone (optional)<input id='supplier-contact-phone' type='tel' "
+        "class='chat-input' style='width:100%;margin-top:4px' placeholder='+44 …'></label>"
+        f"<label>Company number<input id='supplier-registration' class='chat-input' "
+        f"style='width:100%;margin-top:4px' value='{registration}'></label>"
+        f"<label>Active director<select id='supplier-director' class='chat-input' "
+        f"style='width:100%;margin-top:4px'><option value=''>Select / confirm</option>{director_options}</select></label>"
+        f"<label style='grid-column:1/-1'>Registered address<input id='supplier-address' "
+        f"class='chat-input' style='width:100%;margin-top:4px' value='{address}'></label>"
+        "</div><button class='offer-action' onclick='fcSaveSupplierDetails()'>Save details</button>"
+        "<span id='supplier-details-status' class='text-xs text-ink-muted'></span></div>"
     )
 
 
@@ -291,6 +338,31 @@ async def supplier_chat_extract(req):
             "evidence_log": evidence,
             "issues": [str(issue)[:180] for issue in (extracted.get("issues") or [])[:8]],
         }
+        company_name = str(invoice_data.get("supplier_name") or "")
+        company_number = str(invoice_data.get("supplier_registration") or "")
+        if company_name and (
+            not company_number
+            or not invoice_data.get("supplier_registered_address")
+            or not invoice_data.get("supplier_directors")
+        ):
+            try:
+                from utils.companies_house import enrich_supplier
+                company = await asyncio.to_thread(enrich_supplier, company_name, company_number)
+                if company:
+                    invoice_data["supplier_registration"] = company["company_number"]
+                    invoice_data["supplier_registered_address"] = company["registered_address"]
+                    invoice_data["supplier_directors"] = company["directors"]
+                    invoice_data["companies_house_name"] = company["company_name"]
+                    invoice_data["companies_house_status"] = company["company_status"]
+                    invoice_data["companies_house_verified"] = True
+                else:
+                    invoice_data["companies_house_note"] = (
+                        "No confident Companies House match was found; please enter the registration details."
+                    )
+            except RuntimeError:
+                invoice_data["companies_house_note"] = (
+                    "Companies House verification is temporarily unavailable; you can enter the details manually."
+                )
         token = secrets.token_urlsafe(24)
         if len(_PENDING_OFFERS) >= 100:
             _PENDING_OFFERS.pop(next(iter(_PENDING_OFFERS)), None)
@@ -304,6 +376,26 @@ async def supplier_chat_extract(req):
 def _pending_offer(req):
     token = req.session.get("supplier_offer_token", "")
     return token, _PENDING_OFFERS.get(token)
+
+
+@rt("/app/supplier/details", methods=["POST"])
+async def supplier_details(req):
+    if current_role(req) != "supplier":
+        return JSONResponse({"error": "Supplier access required."}, status_code=403)
+    _token, extracted = _pending_offer(req)
+    if not extracted:
+        return JSONResponse({"error": "Upload an invoice first."}, status_code=400)
+    form = await req.form()
+    email = str(form.get("email") or "").strip()
+    if "@" not in email or len(email) > 254:
+        return JSONResponse({"error": "Enter a valid contact email."}, status_code=400)
+    inv = extracted["invoice_data"]
+    inv["supplier_contact_email"] = email
+    inv["supplier_contact_phone"] = str(form.get("phone") or "").strip()[:80]
+    inv["supplier_registration"] = str(form.get("registration") or "").strip()[:80]
+    inv["supplier_registered_address"] = str(form.get("address") or "").strip()[:500]
+    inv["supplier_director_name"] = str(form.get("director") or "").strip()[:160]
+    return JSONResponse({"ok": True, "message": "Details saved. You can now accept the offer."})
 
 
 @rt("/app/supplier/change", methods=["POST"])
@@ -383,6 +475,11 @@ def supplier_chat_accept(req):
     token, extracted = _pending_offer(req)
     if not isinstance(extracted, dict):
         return JSONResponse({"error": "Upload an invoice first."}, status_code=400)
+    if not (extracted.get("invoice_data") or {}).get("supplier_contact_email"):
+        return JSONResponse(
+            {"error": "Please add and save a contact email before accepting the offer."},
+            status_code=400,
+        )
     try:
         data = _parse(json.dumps(extracted))
         funding_id = _create_demand(data)

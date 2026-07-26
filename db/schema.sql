@@ -56,6 +56,10 @@ CREATE INDEX IF NOT EXISTS invoices_due_date_idx ON factorio.invoices(due_date);
 -- Extracted payment/origination metadata (nullable for legacy seeded invoices).
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_name TEXT NOT NULL DEFAULT '';
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_registration TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_registered_address TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_director_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_contact_email TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_contact_phone TEXT NOT NULL DEFAULT '';
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_tax_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_bank_name TEXT NOT NULL DEFAULT '';
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_bank_account TEXT NOT NULL DEFAULT '';

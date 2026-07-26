@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     xai_api_key: str = Field(default="", alias="XAI_API_KEY")
     xai_model: str = Field(default="grok-4.3", alias="XAI_MODEL")
     xai_base_url: str = Field(default="https://api.x.ai/v1", alias="XAI_BASE_URL")
+    ch_api_key: str = Field(default="", alias="CH_API_KEY")
 
     # Display currency for the demo. Stored amounts are UZS-scale and converted
     # to this currency for display via utils.money (default USD).

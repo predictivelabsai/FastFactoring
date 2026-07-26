@@ -298,6 +298,18 @@ async function fcAcceptOffer(){ var r=await fetch('/app/supplier/accept',{method
   if(!r.ok){cpAdd('assistant','<span class=cp-tool>'+cpEsc(out.error||'Could not create application')+'</span>');return;}
   cpAdd('assistant',out.html);
 }
+async function fcSaveSupplierDetails(){var status=document.getElementById('supplier-details-status');
+  var r=await fetch('/app/supplier/details',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({
+      email:(document.getElementById('supplier-contact-email')||{}).value||'',
+      phone:(document.getElementById('supplier-contact-phone')||{}).value||'',
+      registration:(document.getElementById('supplier-registration')||{}).value||'',
+      address:(document.getElementById('supplier-address')||{}).value||'',
+      director:(document.getElementById('supplier-director')||{}).value||''
+    })});var out=await r.json();
+  if(status){status.textContent=out.message||out.error||'';status.style.color=r.ok?'#1F5D43':'#B42318';}
+  if(r.ok)cpAdd('assistant','Thanks — your contact and company details are saved. You can now accept the offer or ask me to change the terms.');
+}
 async function fcReviseOffer(){var amount=document.getElementById('offer-amount').value;
   var days=document.getElementById('offer-days').value;
   var r=await fetch('/app/supplier/change',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
