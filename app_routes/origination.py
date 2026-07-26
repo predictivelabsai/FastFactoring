@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import base64
 import html
+import re
 import secrets
+import unicodedata
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -44,6 +46,16 @@ _SAMPLE_SLUGS = {
     "hospitality": "hospitality-invoice.pdf",
 }
 _PENDING_OFFERS: dict[str, dict] = {}
+
+
+def _pdf_slug(supplier: str, factorio_number: str | int, document: str) -> str:
+    """Return a portable filename: supplier-factorio-reference-date-document.pdf."""
+    raw = unicodedata.normalize("NFKD", str(supplier or "supplier"))
+    supplier_slug = re.sub(r"[^a-z0-9]+", "-", raw.encode("ascii", "ignore").decode().lower())
+    supplier_slug = supplier_slug.strip("-") or "supplier"
+    ref = re.sub(r"[^a-zA-Z0-9]+", "-", str(factorio_number or "pending")).strip("-").lower()
+    kind = re.sub(r"[^a-z0-9]+", "-", document.lower()).strip("-")
+    return f"{supplier_slug}-factorio-{ref}-{date.today().isoformat()}-{kind}.pdf"
 
 
 def _pdf_to_markdown(doc: pymupdf.Document) -> str:
@@ -355,8 +367,13 @@ def supplier_offer_pdf(req):
     pdf.ln(12); pdf.set_font("Helvetica", "I", 9)
     pdf.multi_cell(0, 6, "Indicative only and subject to invoice, debtor, KYC and bank verification. "
                    "This term sheet is not a credit commitment or legal agreement.")
+    filename = _pdf_slug(
+        str(inv.get("supplier_name") or "supplier"),
+        str(inv.get("invoice_number") or "pending"),
+        "term-sheet",
+    )
     return Response(bytes(pdf.output()), media_type="application/pdf",
-                    headers={"Content-Disposition": 'inline; filename="factorio-term-sheet.pdf"'})
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
 @rt("/app/supplier/accept", methods=["POST"])
@@ -431,9 +448,9 @@ def supplier_contract(req, funding_id: int):
     pdf.cell(85, 7, "For Factorio Ltd: __________________")
     pdf.cell(0, 7, f"For {supplier[:34]}: __________________", new_x="LMARGIN", new_y="NEXT")
     data = bytes(pdf.output())
+    filename = _pdf_slug(supplier, funding_id, "financing-contract")
     return Response(data, media_type="application/pdf",
-                    headers={"Content-Disposition":
-                             f'inline; filename="factorio-financing-{row["invoice_number"]}.pdf"'})
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
 def _page(req, message="", error="", payload="", issues=None):

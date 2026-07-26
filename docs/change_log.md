@@ -1,5 +1,9 @@
 # Change Log
 
+## 2026-07-26 — Descriptive financing PDF filenames
+
+- Generated term sheets and financing contracts now use portable filenames containing the supplier slug, Factorio reference, generation date, and document type.
+
 ## 2026-07-26 — Global display currency
 
 - Set USD as the platform default display currency instead of UZS.
