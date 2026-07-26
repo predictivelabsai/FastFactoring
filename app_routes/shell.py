@@ -263,6 +263,14 @@ async function fcAcceptOffer(){ var r=await fetch('/app/supplier/accept',{method
   if(!r.ok){cpAdd('assistant','<span class=cp-tool>'+cpEsc(out.error||'Could not create application')+'</span>');return;}
   cpAdd('assistant',out.html);
 }
+async function fcReviseOffer(){var amount=document.getElementById('offer-amount').value;
+  var days=document.getElementById('offer-days').value;
+  var r=await fetch('/app/supplier/change',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({amount:amount,days:days})});var out=await r.json();
+  if(!r.ok){cpAdd('assistant','<span class=cp-tool>'+cpEsc(out.error||'Could not change terms')+'</span>');return;}
+  cpAdd('user','Please revise the offer to '+amount+' for '+days+' days.');
+  cpAdd('assistant',out.html);
+}
 function fcBankStatement(e){var f=e.target.files[0];if(f)cpAdd('assistant','Bank statement <b>'+cpEsc(f.name)+'</b> attached for optional affordability review.');e.target.value='';}
 function fcConnectBank(){cpAdd('assistant','Open Banking connection is optional. In this demo the secure bank-authorisation hand-off is ready to be connected.');}
 function wsToggleNav(){ document.getElementById('ws').classList.toggle('nav-open'); }
@@ -453,12 +461,8 @@ async def copilot_stream(req):
             yield _sse("done", {}); return
         if role == "supplier":
             from utils import ai
-            prompt = """You are Factorio AI for suppliers seeking invoice financing.
-Keep replies concise and practical. The primary journey is: ask the supplier to attach
-an invoice with the paperclip, then the application will extract it and show an indicative
-financing offer. Explain factoring and offer terms when asked. Bank statements and Open
-Banking are optional follow-ups, not prerequisites. Do not direct suppliers to an investor
-marketplace or a separate triage tool. Never promise final approval."""
+            from utils.prompts import load_prompt
+            prompt = load_prompt("supplier_factorio_ai.md")
             reply = ai.chat([
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg},

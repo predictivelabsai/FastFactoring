@@ -184,22 +184,11 @@ def _tools_for(slug: str, tool_keys):
     return out
 
 
-_SUPERVISOR_PROMPT = (
-    "You are the SUPERVISOR of Factorio's autonomous back-office agent fleet for an "
-    "invoice-finance / factoring platform. Given an instruction, decide which action(s) "
-    "to take and USE THE TOOLS to do them — you may act autonomously (no human approval). "
-    "Use read tools for real figures (never invent numbers, amounts are USD) and write "
-    "tools to take actions (advancing deals, logging dunning, setting limits, drafting "
-    "messages). Be concise; state what you did and any figures. Drafts are not sent."
-)
-
-
 def _prompt_for(slug: str, name: str, desc: str) -> str:
+    from utils.prompts import load_prompt
     if slug == "supervisor":
-        return _SUPERVISOR_PROMPT
-    return (f"You are Factorio's autonomous **{name}** agent ({desc}) on an invoice-finance / "
-            "factoring platform. Use your tools to fetch real figures (never invent; amounts are "
-            "USD) and to take actions autonomously. Be concise; state what you did. Drafts are not sent.")
+        return load_prompt("agent_supervisor.md")
+    return load_prompt("agent_worker.md").format(name=name, description=desc)
 
 
 def available() -> bool:

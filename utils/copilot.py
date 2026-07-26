@@ -14,16 +14,7 @@ from __future__ import annotations
 
 from utils.config import settings
 from utils.money import fmt_money
-
-SYSTEM_PROMPT = (
-    "You are Factorio's back-office copilot for an invoice-finance / factoring "
-    "platform. Answer questions about the platform's dashboards and data — "
-    "funding volume, risk exposure, sector and debtor concentration, the sales "
-    "pipeline, and portfolio performance. ALWAYS use the provided tools to fetch "
-    "real figures; never invent numbers. Amounts are in US dollars. Be concise: "
-    "short sentences or tight bullet points, and quote the actual figures. If a "
-    "tool has no data, say so plainly."
-)
+from utils.prompts import load_prompt
 
 _agent = None
 
@@ -122,7 +113,8 @@ def _get_agent():
     from langgraph.prebuilt import create_react_agent
     model = ChatOpenAI(model=cfg.xai_model, api_key=cfg.xai_api_key,
                        base_url=cfg.xai_base_url, temperature=0.2, timeout=60, max_retries=2)
-    _agent = create_react_agent(model, _build_tools(), prompt=SYSTEM_PROMPT)
+    _agent = create_react_agent(model, _build_tools(),
+                                prompt=load_prompt("backoffice_copilot.md"))
     return _agent
 
 

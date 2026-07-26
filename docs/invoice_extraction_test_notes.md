@@ -6,8 +6,12 @@
 2. The default <https://factorio.co.uk/app> view should be **Factorio AI**, asking
    the supplier to upload an invoice.
 3. Click the paperclip and upload a sample PDF from `data/synthetic-invoices/`.
-4. Review the inline financing offer and accept it.
-5. Open <https://factorio.co.uk/app/supplier> and download the generated contract.
+4. Review the inline financing offer. Verify **Download PDF** opens a one-page
+   indicative term sheet.
+5. Select **Change**, enter a lower amount and different period, and confirm the
+   revised table reflects both values.
+6. Select **Accept**.
+7. Open <https://factorio.co.uk/app/supplier> and download the generated contract.
 
 Expected extracted values include invoice number, supplier and debtor, amount and
 currency, issue/due dates, registration/tax references, bank account, IBAN, SWIFT,

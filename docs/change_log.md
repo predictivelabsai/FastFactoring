@@ -2,6 +2,8 @@
 
 ## 2026-07-26 — AI invoice extraction and financing origination
 
+- Moved all Factorio AI system instructions out of Python into editable, versioned Markdown files under `prompts/`, loaded through `utils/prompts.py`.
+- Added **Download PDF**, **Accept**, and **Change** controls to the chat term sheet. Suppliers can revise the amount paid today and financing period; accepted applications persist the revised terms.
 - Reworked the supplier default into a single **Factorio AI** chat with paperclip upload; removed supplier Triage and Marketplace navigation.
 - The chat now presents an indicative financing offer table (advance paid today, term and monthly-cost disclosure), with optional bank-statement upload and Open Banking follow-up.
 - Accepted offers appear in **My applications** with a generated one-page synthetic financing agreement between Factorio Ltd and the extracted supplier.

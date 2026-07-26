@@ -20,14 +20,13 @@ import json
 import base64
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 from utils.config import settings
+from utils.prompts import load_prompt
 
 # Roughly how many recent turns of a conversation we keep in-context.
 MAX_HISTORY_TURNS = 12
 _TIMEOUT_S = 60
-_INVOICE_PROMPT = Path(__file__).resolve().parents[1] / "prompts" / "invoice_financing_extraction.md"
 
 
 def ai_available() -> bool:
@@ -82,7 +81,7 @@ def extract_invoice(*, text: str = "",
     cfg = settings()
     if not cfg.xai_api_key:
         raise RuntimeError("Invoice extraction is unavailable: XAI_API_KEY is not configured.")
-    template = _INVOICE_PROMPT.read_text(encoding="utf-8")
+    template = load_prompt("invoice_financing_extraction.md")
     prompt = template.replace("{invoice_text}", text[:40_000] or "[Read the attached invoice image.]")
     user_content: str | list[dict] = prompt
     if images:
@@ -135,61 +134,22 @@ def build_conversation(system_prompt: str, history: list[dict],
 
 # ── Assistant 1: loan / invoice-application triage (seller side) ────────────
 
-TRIAGE_SYSTEM = """You are Factorio's invoice-financing triage assistant, working \
-for Universalbank in Uzbekistan. Factorio finances (factors) B2B invoices: a \
-seller sells an unpaid invoice for cash today; the bank/investors advance a share \
-of it and are repaid when the debtor pays.
-
-Your job is to triage a seller's factoring application through a short, friendly \
-chat. In order:
-1. Collect the essentials: seller company, debtor (buyer) company, invoice amount \
-   and currency (USD unless stated), invoice/issue date, due date, and whether the \
-   invoice is registered on SoliqOnline (the state e-invoice system) and \
-   buyer-confirmed.
-2. Ask only for what is still missing — never re-ask what the seller already gave.
-3. When you have enough, produce a concise triage summary: an indicative risk band \
-   (A–D), an indicative advance rate (typically 70–90%), the key risk flags, and \
-   the documents the bank will need next.
-
-Rules: be concise (a few short sentences or tight bullet points). Never promise a \
-final decision or an exact price — everything is indicative, subject to \
-verification. If asked something outside invoice financing, steer back politely. \
-Amounts are in US dollars (USD) unless the seller says otherwise."""
-
-
 _LANG_NAMES = {"en": "English", "uz": "Uzbek", "ru": "Russian"}
 
 
 def language_directive(lang: str) -> str:
     name = _LANG_NAMES.get(lang, "English")
-    return (f"\n\nAlways write your replies in {name}. Keep company names, "
-            f"invoice numbers and currency codes as-is.")
+    return "\n\n" + load_prompt("language_directive.md").format(language=name)
 
 
 def triage_system_prompt(lang: str = "en") -> str:
-    return TRIAGE_SYSTEM + language_directive(lang)
+    return load_prompt("invoice_triage.md") + language_directive(lang)
 
 
 # ── Assistant 2: investor reporting (investor side) ─────────────────────────
 
-REPORTING_SYSTEM = """You are Factorio's investor-reporting assistant for \
-Universalbank's invoice-financing marketplace. You answer an investor's questions \
-about THEIR OWN portfolio of financed invoices, using only the portfolio data \
-provided in this prompt. Investors earn a short-term, asset-backed return by \
-funding verified invoices; positions settle when the debtor pays.
-
-Rules:
-- Ground every number in the PORTFOLIO DATA below. If the data doesn't contain the \
-  answer, say so plainly — do not invent figures.
-- Be concise and specific; use short bullet points and quote the actual amounts.
-- Amounts are in US dollars (USD). Format large numbers readably.
-- You may explain concepts (risk grades A–D, advance rate, aging, net annual \
-  return) but keep it brief and practical.
-- Never give personalised financial advice or guarantee future returns."""
-
-
 def reporting_system_prompt(portfolio_context: str, lang: str = "en") -> str:
-    return (f"{REPORTING_SYSTEM}{language_directive(lang)}"
+    return (f"{load_prompt('investor_reporting.md')}{language_directive(lang)}"
             f"\n\n=== PORTFOLIO DATA ===\n{portfolio_context}")
 
 

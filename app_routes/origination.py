@@ -155,7 +155,8 @@ def _create_demand(data: dict) -> int:
             company = cur.fetchone()
             if not seller or not company:
                 raise ValueError("Seed seller and company records before uploading.")
-            terms = (data["due_date"] - data["issue_date"]).days
+            terms = int((data.get("financing") or {}).get(
+                "period_days", (data["due_date"] - data["issue_date"]).days))
             cur.execute("""
                 INSERT INTO factorio.invoices
                     (invoice_number, seller_id, company_id, debtor_name, debtor_registration,
@@ -197,19 +198,33 @@ def _create_demand(data: dict) -> int:
     return funding_id
 
 
-def _offer_html(extracted: dict) -> str:
+def _offer_terms(extracted: dict) -> dict:
     inv = extracted.get("invoice_data") or {}
     amount = float(inv.get("amount") or 0)
-    advance_rate = 85.0
-    advance = amount * advance_rate / 100
+    financing = inv.get("financing") or {}
+    advance_rate = float(financing.get("advance_rate_pct") or 85)
+    advance = float(financing.get("funding_goal") or amount * advance_rate / 100)
+    advance_rate = advance / amount * 100 if amount else advance_rate
     try:
         issue = date.fromisoformat(str(inv.get("issue_date")))
         due = date.fromisoformat(str(inv.get("due_date")))
-        days = max(1, (due - issue).days)
+        default_days = max(1, (due - issue).days)
     except ValueError:
-        days = 30
-    monthly_fee = 2.0
+        default_days = 30
+    days = int(financing.get("period_days") or default_days)
+    monthly_fee = float(financing.get("fee_pct_per_30d") or 2)
     estimated_fee = advance * monthly_fee / 100 * days / 30
+    return {"invoice": inv, "amount": amount, "advance_rate": advance_rate,
+            "advance": advance, "days": days, "monthly_fee": monthly_fee,
+            "estimated_fee": estimated_fee}
+
+
+def _offer_html(extracted: dict) -> str:
+    terms = _offer_terms(extracted)
+    inv = terms["invoice"]
+    amount = terms["amount"]; advance_rate = terms["advance_rate"]
+    advance = terms["advance"]; days = terms["days"]
+    monthly_fee = terms["monthly_fee"]; estimated_fee = terms["estimated_fee"]
     cur = html.escape(str(inv.get("currency") or "USD"))
     supplier = html.escape(str(inv.get("supplier_name") or "your company"))
     invoice = html.escape(str(inv.get("invoice_number") or "invoice"))
@@ -228,7 +243,15 @@ def _offer_html(extracted: dict) -> str:
         f"<p class='text-xs text-ink-muted'>Financing costs {monthly_fee:.1f}% per 30 days "
         "on the advanced amount. Final terms remain subject to verification.</p>"
         f"{issue_html}"
-        "<button class='offer-action' onclick='fcAcceptOffer()'>Accept offer & create application</button>"
+        "<a class='offer-action secondary' href='/app/supplier/offer-pdf' target='_blank'>Download PDF</a>"
+        "<button class='offer-action' onclick='fcAcceptOffer()'>Accept</button>"
+        "<button class='offer-action secondary' onclick=\"document.getElementById('offer-change').style.display='block'\">Change</button>"
+        "<div id='offer-change' style='display:none;margin-top:10px;padding:12px;background:#fff;border:1px solid #E3DFD2;border-radius:12px'>"
+        "<label>Amount to receive today</label>"
+        f"<input id='offer-amount' type='number' value='{advance:.2f}' min='1' max='{amount:.2f}' class='chat-input' style='width:180px;margin:0 10px'>"
+        "<label>Period (days)</label>"
+        f"<input id='offer-days' type='number' value='{days}' min='1' max='365' class='chat-input' style='width:100px;margin:0 10px'>"
+        "<button class='offer-action' onclick='fcReviseOffer()'>Update terms</button></div>"
         "<button class='offer-action secondary' onclick=\"document.getElementById('cp-bank-file').click()\">"
         "Upload bank statements (optional)</button>"
         "<button class='offer-action secondary' onclick='fcConnectBank()'>Connect bank (optional)</button>"
@@ -266,12 +289,81 @@ async def supplier_chat_extract(req):
         return JSONResponse({"error": str(exc)}, status_code=400)
 
 
+def _pending_offer(req):
+    token = req.session.get("supplier_offer_token", "")
+    return token, _PENDING_OFFERS.get(token)
+
+
+@rt("/app/supplier/change", methods=["POST"])
+async def supplier_offer_change(req):
+    if current_role(req) != "supplier":
+        return JSONResponse({"error": "Supplier access required."}, status_code=403)
+    _token, extracted = _pending_offer(req)
+    if not extracted:
+        return JSONResponse({"error": "Upload an invoice first."}, status_code=400)
+    form = await req.form()
+    try:
+        amount = float(form.get("amount") or 0)
+        days = int(form.get("days") or 0)
+        invoice_amount = float(extracted["invoice_data"]["amount"])
+        if not 0 < amount <= invoice_amount:
+            raise ValueError("Financing amount must be positive and no greater than the invoice.")
+        if not 1 <= days <= 365:
+            raise ValueError("Financing period must be between 1 and 365 days.")
+        extracted["invoice_data"]["financing"] = {
+            "funding_goal": amount,
+            "advance_rate_pct": amount / invoice_amount * 100,
+            "fee_pct_per_30d": 2,
+            "period_days": days,
+        }
+        return JSONResponse({"ok": True, "html": _offer_html(extracted)})
+    except (TypeError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@rt("/app/supplier/offer-pdf", methods=["GET"])
+def supplier_offer_pdf(req):
+    if current_role(req) != "supplier":
+        return RedirectResponse("/app", status_code=303)
+    _token, extracted = _pending_offer(req)
+    if not extracted:
+        return Response("Upload an invoice first", status_code=400)
+    terms = _offer_terms(extracted)
+    inv = terms["invoice"]
+    from fpdf import FPDF
+    pdf = FPDF(); pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 12, "INDICATIVE INVOICE FINANCING TERM SHEET",
+             align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 7, "Factorio Ltd | Synthetic demonstration",
+             align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(10)
+    rows = [
+        ("Supplier", str(inv.get("supplier_name") or "—")),
+        ("Debtor", str(inv.get("debtor_name") or "—")),
+        ("Invoice", str(inv.get("invoice_number") or "—")),
+        ("Invoice value", f"{inv.get('currency','USD')} {terms['amount']:,.2f}"),
+        ("Amount paid today", f"{inv.get('currency','USD')} {terms['advance']:,.2f} ({terms['advance_rate']:.1f}%)"),
+        ("Financing period", f"{terms['days']} days"),
+        ("Cost per 30 days", f"{terms['monthly_fee']:.2f}% of advanced amount"),
+        ("Indicative total fee", f"{inv.get('currency','USD')} {terms['estimated_fee']:,.2f}"),
+    ]
+    for label, value in rows:
+        pdf.set_font("Helvetica", "B", 11); pdf.cell(55, 9, label)
+        pdf.set_font("Helvetica", size=11); pdf.cell(0, 9, value, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(12); pdf.set_font("Helvetica", "I", 9)
+    pdf.multi_cell(0, 6, "Indicative only and subject to invoice, debtor, KYC and bank verification. "
+                   "This term sheet is not a credit commitment or legal agreement.")
+    return Response(bytes(pdf.output()), media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="factorio-term-sheet.pdf"'})
+
+
 @rt("/app/supplier/accept", methods=["POST"])
 def supplier_chat_accept(req):
     if current_role(req) != "supplier":
         return JSONResponse({"error": "Supplier access required."}, status_code=403)
-    token = req.session.get("supplier_offer_token", "")
-    extracted = _PENDING_OFFERS.get(token)
+    token, extracted = _pending_offer(req)
     if not isinstance(extracted, dict):
         return JSONResponse({"error": "Upload an invoice first."}, status_code=400)
     try:
