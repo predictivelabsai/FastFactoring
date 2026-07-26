@@ -16,7 +16,7 @@ from datetime import date, datetime
 
 from fasthtml.common import (
     Div, P, Span, A, Article, Table, Thead, Tbody, Tr, Th, Td, NotStr, Titled,
-    Form, Select, Option, Button,
+    Form, Select, Option, Button, Img,
 )
 from starlette.responses import RedirectResponse
 
@@ -525,6 +525,32 @@ def supplier_profile(req):
     rows = [Tr(Td(label, cls=_TD + " text-ink-muted"),
                Td(value, cls=_TD + " font-medium"),
                cls="border-b border-line") for label, value in details]
+    connections = [
+        ("/static/lloyds-bank.png", "Lloyds Bank", "Open Banking", "Planned",
+         "Bank-account verification and transaction access will use a consent-based Open Banking connection."),
+        ("/static/quickbooks-logo.svg", "QuickBooks", "Accounting", "Demo available",
+         "Hypothetical connection for invoices, customers, payments, and reconciliation."),
+        ("/static/xero-logo.svg", "Xero", "Accounting", "Demo available",
+         "Hypothetical connection for receivables, contacts, and payment-status synchronisation."),
+        ("/static/sage-logo.svg", "Sage", "Accounting", "Demo available",
+         "Hypothetical connection for invoice import, ledger coding, and settlement reconciliation."),
+    ]
+    cards = Div(*[
+        Article(
+            Div(Img(src=logo, alt=f"{name} logo",
+                    cls="w-full h-12 object-contain object-left"),
+                Span(status, cls=("text-[11px] px-2.5 py-1 rounded-full "
+                                  + ("bg-amber-50 text-amber-700" if status == "Planned"
+                                     else "bg-green-50 text-green-700"))),
+                cls="flex items-center justify-between gap-4"),
+            P(kind, cls="text-[10px] font-mono uppercase tracking-widest text-ink-dim mt-5"),
+            P(description, cls="text-sm text-ink-muted leading-relaxed mt-2"),
+            Button("Connect later" if status == "Planned" else "Connect demo",
+                   type="button", disabled=True,
+                   cls="mt-5 px-4 py-2 rounded-full border border-line text-xs text-ink-muted cursor-not-allowed"),
+            cls="p-6 rounded-2xl bg-bg-elevated border border-line",
+        ) for logo, name, kind, status, description in connections
+    ], cls="grid md:grid-cols-2 gap-4")
     return app_page(
         "My Profile",
         Section_(Eyebrow("Supplier account"), Heading(1, "My Profile", cls="mt-4"),
@@ -532,6 +558,11 @@ def supplier_profile(req):
                    cls="mt-4 text-ink-muted text-lg max-w-3xl"),
                  cls="border-t border-line"),
         Section_(_table(["Field", "Details"], rows), cls="border-t border-line"),
+        Section_(Eyebrow("Connections"),
+                 Heading(2, "Banks & accounting", cls="mt-4"),
+                 P("Synthetic integration choices for this demo supplier. No external account is currently connected.",
+                   cls="mt-3 mb-8 text-ink-muted max-w-3xl"),
+                 cards, cls="border-t border-line"),
         current_path="/app/supplier/profile", lang=lang, role="supplier",
     )
 

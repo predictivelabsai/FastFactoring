@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-26 — Supplier bank and accounting connections
+
+- Added Lloyds Bank to the Supplier Profile as a planned, consent-based Open Banking connection.
+- Added clearly labelled hypothetical QuickBooks, Xero, and Sage accounting integration cards; no external account is represented as connected.
+
 ## 2026-07-26 — Site-wide favicon
 
 - Added a green diamond Factorio favicon to marketing, authentication, application, and public shared-chat pages.
