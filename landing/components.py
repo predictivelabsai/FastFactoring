@@ -201,6 +201,7 @@ def page(title: str, *content, current_path: str = "/", lang: str = DEFAULT_LANG
         Meta(name="viewport", content="width=device-width, initial-scale=1"),
         Meta(name="description", content=f"{SITE_NAME} — {tagline}"),
         Title(f"{title} · {SITE_NAME}"),
+        Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg"),
         Link(rel="preconnect", href="https://fonts.googleapis.com"),
         Link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin=""),
         Link(

@@ -1,5 +1,9 @@
 # Change Log
 
+## 2026-07-26 — Site-wide favicon
+
+- Added a green diamond Factorio favicon to marketing, authentication, application, and public shared-chat pages.
+
 ## 2026-07-26 — Supplier pre-approval and Companies House follow-up
 
 - Invoice upload now presents a clear **You’re pre-approved!** message with the indicative financing offer.

@@ -402,6 +402,7 @@ def _head(title: str, lang: str):
     return [
         Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1"),
         Title(f"{title} · {SITE_NAME}"),
+        Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg"),
         Link(rel="preconnect", href="https://fonts.googleapis.com"),
         Link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"),
         Script(src="https://cdn.tailwindcss.com"), Script(NotStr(TAILWIND_CONFIG)),
@@ -540,7 +541,9 @@ def shared_chat(req, token: str):
         (token,),
     )
     if not row:
-        return Html(Head(Title("Shared chat not found")), Body(H2("Shared chat not found"))), 404
+        return Html(Head(Title("Shared chat not found"),
+                         Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg")),
+                    Body(H2("Shared chat not found"))), 404
     try:
         messages = json.loads(row["messages"])
     except (TypeError, json.JSONDecodeError):
@@ -562,7 +565,9 @@ h1{font-size:24px;margin:18px 0 5px}.shared-date{color:#7A867E;font-size:12px;ma
 """
     return Html(
         Head(Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1"),
-             Title(f"{row['title']} · Factorio"), Style(shared_css)),
+             Title(f"{row['title']} · Factorio"),
+             Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg"),
+             Style(shared_css)),
         Body(Div(Div("◆ Factorio", cls="shared-brand"), H2(row["title"]),
                  P(f"Read-only conversation · {row['created_at']:%d %b %Y}", cls="shared-date"),
                  *bubbles, cls="shared")))

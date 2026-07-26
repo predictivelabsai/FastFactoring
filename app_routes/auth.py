@@ -188,6 +188,7 @@ def _login_page(error: str = "", email: str = ""):
     return Html(
         Head(Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1"),
              Title(f"Sign in · {SITE_NAME}"),
+             Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg"),
              Link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"),
              Script(src="https://cdn.tailwindcss.com"), Script(NotStr(TAILWIND_CONFIG)),
              Link(rel="stylesheet", href="/static/site.css")),
