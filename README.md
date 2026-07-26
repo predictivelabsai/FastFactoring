@@ -142,14 +142,16 @@ Dockerfile-based application sourced from the public GitHub repo. Production run
 ### Manual invoice-extraction test
 
 1. Open [Sign in](https://factorio.co.uk/login) and choose **Supplier**.
-2. Open [My applications](https://factorio.co.uk/app/seller).
-3. Download one of the synthetic PDF samples shown below the upload field.
-4. Upload it and click **Extract invoice fields with AI**.
-5. Check supplier/debtor, amount/currency, dates, registration, bank account,
-   IBAN and SWIFT; then click **Create financing demand**.
-6. Open the linked demand or [Marketplace](https://factorio.co.uk/app/marketplace)
-   and confirm the invoice is listed. Re-uploading the same sample should show a
-   duplicate invoice-number error instead of creating another record.
+2. The default [Factorio AI](https://factorio.co.uk/app) chat asks for an invoice.
+3. Click the paperclip and upload a synthetic PDF from `data/synthetic-invoices/`.
+4. Check the inline offer: invoice value, percentage and amount paid today, term,
+   and the smaller monthly financing-cost disclosure.
+5. Accept the offer, then open [My applications](https://factorio.co.uk/app/supplier)
+   and download the generated one-page synthetic financing contract.
+6. Re-uploading the same sample should show a duplicate invoice-number error.
+
+Bank-statement upload and Open Banking connection are optional follow-up actions
+shown beneath the offer; neither is required to see indicative terms.
 
 Digital PDFs use local text-to-Markdown extraction. To exercise the scanned fallback,
 print a sample PDF to an image-only PDF (or upload a PNG/JPEG screenshot); only that

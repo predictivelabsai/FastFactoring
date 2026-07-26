@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 import base64
+import html
+import secrets
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import pymupdf
 from fasthtml.common import A, Button, Div, Form, Input, Label, NotStr, P, Script, Textarea
-from starlette.responses import FileResponse, RedirectResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from app import rt
 from app_routes._shared import app_page, current_role, current_subrole, fmt_uzs
@@ -41,6 +43,7 @@ _SAMPLE_SLUGS = {
     "logistics": "logistics-invoice.pdf",
     "hospitality": "hospitality-invoice.pdf",
 }
+_PENDING_OFFERS: dict[str, dict] = {}
 
 
 def _pdf_to_markdown(doc: pymupdf.Document) -> str:
@@ -194,6 +197,153 @@ def _create_demand(data: dict) -> int:
     return funding_id
 
 
+def _offer_html(extracted: dict) -> str:
+    inv = extracted.get("invoice_data") or {}
+    amount = float(inv.get("amount") or 0)
+    advance_rate = 85.0
+    advance = amount * advance_rate / 100
+    try:
+        issue = date.fromisoformat(str(inv.get("issue_date")))
+        due = date.fromisoformat(str(inv.get("due_date")))
+        days = max(1, (due - issue).days)
+    except ValueError:
+        days = 30
+    monthly_fee = 2.0
+    estimated_fee = advance * monthly_fee / 100 * days / 30
+    cur = html.escape(str(inv.get("currency") or "USD"))
+    supplier = html.escape(str(inv.get("supplier_name") or "your company"))
+    invoice = html.escape(str(inv.get("invoice_number") or "invoice"))
+    issues = extracted.get("issues") or []
+    issue_html = ("<p class='text-xs text-amber-700'>Review: " +
+                  html.escape("; ".join(map(str, issues))) + "</p>") if issues else ""
+    return (
+        f"<p>I extracted invoice <b>{invoice}</b> for <b>{supplier}</b>. "
+        "Here is your indicative financing offer:</p>"
+        "<table class='offer-table'>"
+        f"<tr><td>Invoice value</td><td>{cur} {amount:,.2f}</td></tr>"
+        f"<tr><td>You receive today ({advance_rate:.0f}%)</td><td>{cur} {advance:,.2f}</td></tr>"
+        f"<tr><td>Invoice term</td><td>{days} days</td></tr>"
+        f"<tr><td>Indicative financing fee</td><td>{cur} {estimated_fee:,.2f}</td></tr>"
+        "</table>"
+        f"<p class='text-xs text-ink-muted'>Financing costs {monthly_fee:.1f}% per 30 days "
+        "on the advanced amount. Final terms remain subject to verification.</p>"
+        f"{issue_html}"
+        "<button class='offer-action' onclick='fcAcceptOffer()'>Accept offer & create application</button>"
+        "<button class='offer-action secondary' onclick=\"document.getElementById('cp-bank-file').click()\">"
+        "Upload bank statements (optional)</button>"
+        "<button class='offer-action secondary' onclick='fcConnectBank()'>Connect bank (optional)</button>"
+    )
+
+
+@rt("/app/supplier/extract", methods=["POST"])
+async def supplier_chat_extract(req):
+    if current_role(req) != "supplier":
+        return JSONResponse({"error": "Supplier access required."}, status_code=403)
+    form = await req.form()
+    try:
+        extracted = _decode_document(
+            str(form.get("file_data") or ""), str(form.get("filename") or ""),
+            str(form.get("mime_type") or ""))
+        invoice_data = dict(extracted.get("invoice_data") or {})
+        invoice_data.pop("line_items", None)
+        evidence = []
+        for item in (extracted.get("evidence_log") or [])[:10]:
+            if isinstance(item, dict):
+                evidence.append({k: str(item.get(k, ""))[:160]
+                                 for k in ("field", "value", "excerpt")})
+        pending = {
+            "invoice_data": invoice_data,
+            "evidence_log": evidence,
+            "issues": [str(issue)[:180] for issue in (extracted.get("issues") or [])[:8]],
+        }
+        token = secrets.token_urlsafe(24)
+        if len(_PENDING_OFFERS) >= 100:
+            _PENDING_OFFERS.pop(next(iter(_PENDING_OFFERS)), None)
+        _PENDING_OFFERS[token] = pending
+        req.session["supplier_offer_token"] = token
+        return JSONResponse({"ok": True, "html": _offer_html(extracted)})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@rt("/app/supplier/accept", methods=["POST"])
+def supplier_chat_accept(req):
+    if current_role(req) != "supplier":
+        return JSONResponse({"error": "Supplier access required."}, status_code=403)
+    token = req.session.get("supplier_offer_token", "")
+    extracted = _PENDING_OFFERS.get(token)
+    if not isinstance(extracted, dict):
+        return JSONResponse({"error": "Upload an invoice first."}, status_code=400)
+    try:
+        data = _parse(json.dumps(extracted))
+        funding_id = _create_demand(data)
+        _PENDING_OFFERS.pop(token, None)
+        req.session.pop("supplier_offer_token", None)
+        contract = f"/app/supplier/contract/{funding_id}"
+        return JSONResponse({"ok": True, "html": (
+            f"<p>Your application is ready. Financing demand <b>#{funding_id}</b> was created.</p>"
+            f"<a class='offer-action' href='{contract}' target='_blank'>Download financing contract</a>"
+            "<a class='offer-action secondary' href='/app/supplier'>View My applications</a>"
+            "<p class='text-xs text-ink-muted mt-2'>You can still upload bank statements or connect "
+            "your bank later if additional verification is requested.</p>"
+        )})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@rt("/app/supplier/contract/{funding_id}", methods=["GET"])
+def supplier_contract(req, funding_id: int):
+    if current_role(req) != "supplier":
+        return RedirectResponse("/app", status_code=303)
+    from db import fetch_one
+    row = fetch_one("""
+        SELECT i.invoice_number, i.supplier_name, i.debtor_name, i.amount, i.currency,
+               i.issue_date, i.due_date, f.id funding_id, f.funding_goal,
+               f.advance_rate_pct, f.fee_pct_per_30d
+        FROM factorio.invoice_funding f JOIN factorio.invoices i ON i.id=f.invoice_id
+        WHERE f.id=%(f)s
+    """, {"f": funding_id})
+    if not row:
+        return Response("Contract not found", status_code=404)
+    from fpdf import FPDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 12, "INVOICE FINANCING AGREEMENT", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    pdf.cell(0, 6, f"Synthetic demo contract | Application #{funding_id}",
+             align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+    pdf.set_font("Helvetica", size=11)
+    supplier = row["supplier_name"] or "Supplier company"
+    paragraphs = [
+        f"This agreement is between Factorio Ltd (the Financier) and {supplier} (the Supplier).",
+        f"The Supplier assigns receivable {row['invoice_number']} issued to {row['debtor_name']}, "
+        f"with face value {row['currency']} {float(row['amount']):,.2f} and due date {row['due_date']}.",
+        f"Subject to verification, Factorio will advance {float(row['advance_rate_pct']):.0f}% of "
+        f"the invoice value: {row['currency']} {float(row['funding_goal']):,.2f}.",
+        f"The indicative financing fee is {float(row['fee_pct_per_30d']):.2f}% per 30 days on the "
+        "advanced amount. The debtor will pay the assigned invoice into Factorio's collection account.",
+        "The remaining invoice balance, less financing fees and any agreed charges, will be remitted "
+        "to the Supplier after payment by the debtor.",
+        "This synthetic agreement is for demonstration only. It creates no legal obligation, credit "
+        "commitment, assignment, security interest, or payment instruction.",
+    ]
+    for idx, text in enumerate(paragraphs, 1):
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(9, 7, f"{idx}.", new_x="RIGHT", new_y="TOP")
+        pdf.set_font("Helvetica", size=11)
+        pdf.multi_cell(170, 7, text, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+    pdf.ln(8)
+    pdf.cell(85, 7, "For Factorio Ltd: __________________")
+    pdf.cell(0, 7, f"For {supplier[:34]}: __________________", new_x="LMARGIN", new_y="NEXT")
+    data = bytes(pdf.output())
+    return Response(data, media_type="application/pdf",
+                    headers={"Content-Disposition":
+                             f'inline; filename="factorio-financing-{row["invoice_number"]}.pdf"'})
+
+
 def _page(req, message="", error="", payload="", issues=None):
     rows = []
     if _HAS_DB:
@@ -279,7 +429,7 @@ document.getElementById('invoice-file').addEventListener('change', async (event)
 def seller_origination(req):
     if current_role(req) != "supplier":
         return RedirectResponse("/app", status_code=303)
-    return _page(req)
+    return RedirectResponse("/app", status_code=303)
 
 
 @rt("/app/seller/sample/{name}", methods=["GET"])

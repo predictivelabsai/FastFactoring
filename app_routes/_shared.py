@@ -169,9 +169,7 @@ _NAV_BY_ROLE = {
         ("nav_assistant", "/app/assistant"),
     ],
     "supplier": [
-        ("nav_seller", "/app/seller"),
-        ("nav_triage", "/app/triage"),
-        ("mkt_eyebrow", "/app/marketplace"),
+        ("nav_seller", "/app/supplier"),
     ],
     "payer": [
         ("nav_payer", "/app/payer"),

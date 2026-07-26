@@ -2,6 +2,9 @@
 
 ## 2026-07-26 — AI invoice extraction and financing origination
 
+- Reworked the supplier default into a single **Factorio AI** chat with paperclip upload; removed supplier Triage and Marketplace navigation.
+- The chat now presents an indicative financing offer table (advance paid today, term and monthly-cost disclosure), with optional bank-statement upload and Open Banking follow-up.
+- Accepted offers appear in **My applications** with a generated one-page synthetic financing agreement between Factorio Ltd and the extracted supplier.
 - Added a supplier-facing invoice upload workflow at `/app/seller` for PDF, PNG, JPEG, JSON, and text documents.
 - Added Grok/xAI extraction using `prompts/invoice_financing_extraction.md`, temperature-zero JSON output, evidence references, confidence, and review issues.
 - Digital PDFs are converted to Markdown locally before extraction. A text-density check detects scanned/image-only PDFs and uses the slower xAI image-understanding path only as a fallback.

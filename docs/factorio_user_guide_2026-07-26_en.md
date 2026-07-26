@@ -212,10 +212,10 @@ Factorio is an invoice-financing (factoring) marketplace. Businesses sell their 
 
 ![AI invoice upload and extraction](img/en-19-invoice-upload.png)
 
-- Upload a PDF, PNG, JPEG, JSON or text invoice; three synthetic PDF samples are included for a safe demonstration.
-- Digital PDFs are converted to Markdown locally; only scanned/image-only invoices use the slower xAI vision fallback. Grok then extracts identities, dates, amount/currency, PO, tax/registration and bank details.
-- Every result includes confidence, evidence and review issues; the supplier reviews editable JSON before submission.
-- Submission creates the invoice and an open marketplace financing demand atomically, using the requested or default advance rate.
+- Factorio AI is the supplier's default workspace: attach a PDF, image, JSON or text invoice from the chat paperclip.
+- Digital PDFs become Markdown locally; only scanned/image-only invoices use the slower xAI vision fallback.
+- The chat presents invoice value, the percentage and amount paid today, term and monthly financing cost; bank statements or Open Banking are optional follow-ups.
+- Accepting creates the application and a one-page synthetic financing contract between Factorio Ltd and the extracted supplier.
 
 ---
 

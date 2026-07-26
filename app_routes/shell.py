@@ -13,7 +13,7 @@ import json
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, Style, NotStr,
-    Div, Span, A, Button, Form, Textarea, P, H2,
+    Div, Span, A, Button, Form, Input, Textarea, P, H2,
 )
 from starlette.responses import StreamingResponse
 
@@ -59,7 +59,7 @@ TOOLS = {
 _TOOLS_BY_ROLE = {
     "investor": ["dashboard", "marketplace", "auctions", "secondary", "portfolio",
                  "statement", "autoinvest", "triage", "reports"],
-    "supplier": ["supplier", "triage", "marketplace"],
+    "supplier": ["supplier"],
     "payer":    ["payer"],
     "admin":    ["console", "onboarding", "processing", "risk", "scoring", "funding",
                  "collections", "accounting", "compliance", "integrations",
@@ -157,6 +157,14 @@ SHELL_CSS = """
   padding:8px 13px; cursor:pointer; transition:border-color .15s, background .15s; }
 .chat-card:hover { border-color:#1F5D43; background:#F3F1E9; }
 .chat-form { display:flex; gap:10px; padding:14px 24px 22px; }
+.chat-attach { width:44px; height:44px; border:1px solid #CFC8B4; border-radius:999px;
+  background:#fff; color:#1F5D43; font-size:20px; cursor:pointer; flex:0 0 auto; }
+.offer-table { width:100%; border-collapse:collapse; margin:10px 0; background:#fff; border-radius:12px; overflow:hidden; }
+.offer-table td { padding:8px 10px; border-bottom:1px solid #E3DFD2; }
+.offer-table td:last-child { text-align:right; font-weight:600; }
+.offer-action { display:inline-block; border:0; border-radius:999px; padding:9px 14px; margin:6px 6px 0 0;
+  cursor:pointer; font-weight:600; background:#1F5D43; color:#fff; }
+.offer-action.secondary { background:#fff; color:#1F5D43; border:1px solid #CFC8B4; }
 .chat-input { flex:1; border:1px solid #CFC8B4; border-radius:14px; padding:12px 14px; font-size:14px;
   resize:none; outline:none; background:#fff; font-family:inherit; }
 .chat-input:focus { border-color:#1F5D43; }
@@ -183,7 +191,7 @@ SHELL_JS = """
 function cpAdd(role, html){ var m=document.getElementById('cp-msgs');
   var h=document.getElementById('chat-hero'); if(h) h.remove();
   var wrap=document.createElement('div'); wrap.className='cp-msg '+role;
-  if(role==='assistant'){ var w=document.createElement('div'); w.className='cp-who'; w.textContent='AI Assistant'; wrap.appendChild(w);
+  if(role==='assistant'){ var w=document.createElement('div'); w.className='cp-who'; w.textContent='Factorio AI'; wrap.appendChild(w);
     var body=document.createElement('div'); body.innerHTML=html; wrap.appendChild(body); m.appendChild(wrap); m.scrollTop=m.scrollHeight; return body; }
   wrap.innerHTML=html; m.appendChild(wrap); m.scrollTop=m.scrollHeight; return wrap; }
 function cpMd(t){ try{ return window.marked ? marked.parse(t) : t.replace(/\\n/g,'<br>'); }catch(e){ return t; } }
@@ -240,6 +248,23 @@ async function cpSend(ev){ if(ev&&ev.preventDefault) ev.preventDefault();
   var m=document.getElementById('cp-msgs'); m.scrollTop=m.scrollHeight; _cpBusy=false; return false;
 }
 function cpAsk(q){ var i=document.getElementById('cp-input'); i.value=q; cpSend(); }
+async function fcInvoiceFile(e){ var file=e.target.files[0]; if(!file) return;
+  cpAdd('user','📎 '+cpEsc(file.name)); var thinking=cpAdd('assistant','<span class=cp-tool>Reading invoice and preparing your offer…</span>');
+  var data=await new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(r.result)};r.onerror=reject;r.readAsDataURL(file);});
+  try{ var resp=await fetch('/app/supplier/extract',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({file_data:data,filename:file.name,mime_type:file.type})});
+    var out=await resp.json(); thinking.parentNode.remove();
+    if(!resp.ok){cpAdd('assistant','<span class=cp-tool>'+cpEsc(out.error||'Extraction failed')+'</span>');return;}
+    cpAdd('assistant',out.html);
+  }catch(err){thinking.innerHTML='<span class=cp-tool>Upload failed. Please try again.</span>';}
+  e.target.value='';
+}
+async function fcAcceptOffer(){ var r=await fetch('/app/supplier/accept',{method:'POST'}); var out=await r.json();
+  if(!r.ok){cpAdd('assistant','<span class=cp-tool>'+cpEsc(out.error||'Could not create application')+'</span>');return;}
+  cpAdd('assistant',out.html);
+}
+function fcBankStatement(e){var f=e.target.files[0];if(f)cpAdd('assistant','Bank statement <b>'+cpEsc(f.name)+'</b> attached for optional affordability review.');e.target.value='';}
+function fcConnectBank(){cpAdd('assistant','Open Banking connection is optional. In this demo the secure bank-authorisation hand-off is ready to be connected.');}
 function wsToggleNav(){ document.getElementById('ws').classList.toggle('nav-open'); }
 
 /* ── Invoice PDF right pane ─────────────────────────────────────────── */
@@ -278,19 +303,30 @@ def _left_nav(role: str, current_path: str, lang: str):
     return Div(*secs, cls="ws-left")
 
 
-def _chat_center(lang: str):
+def _chat_center(lang: str, role: str = "investor"):
     if not copilot_available():
-        return Div(Div("AI Assistant", cls="cp-who"),
+        return Div(Div("Factorio AI", cls="cp-who"),
                    P("Set XAI_API_KEY to enable the copilot.", cls="chat-disabled"),
                    cls="chat")
+    supplier = role == "supplier"
     hero = Div(Span("✨", cls="spark"),
-               H2(t("cp_hero_title", lang)),
-               P(t("cp_hero_sub", lang)),
+               H2("Upload an invoice to get a financing offer" if supplier else t("cp_hero_title", lang)),
+               P("Attach a digital PDF or invoice image. Factorio AI will extract the details and show how much you can receive today."
+                 if supplier else t("cp_hero_sub", lang)),
                id="chat-hero", cls="chat-hero")
-    cards = [Span(t(k, lang), cls="chat-card", onclick=f"cpAsk('{t(k, lang)}')") for k in _SUGGESTIONS]
+    cards = ([Span("How invoice financing works", cls="chat-card",
+                   onclick="cpAsk('How does invoice financing work?')")]
+             if supplier else
+             [Span(t(k, lang), cls="chat-card", onclick=f"cpAsk('{t(k, lang)}')") for k in _SUGGESTIONS])
     return Div(
         Div(hero, id="cp-msgs", cls="chat-msgs"),
-        Form(Textarea("", id="cp-input", cls="chat-input", rows="1",
+        Form(Input(type="file", id="cp-invoice-file", accept=".pdf,.png,.jpg,.jpeg,.json,.txt",
+                   style="display:none", onchange="fcInvoiceFile(event)") if supplier else None,
+             Input(type="file", id="cp-bank-file", accept=".pdf,.csv",
+                   style="display:none", onchange="fcBankStatement(event)") if supplier else None,
+             Button("📎", cls="chat-attach", type="button", title="Upload invoice",
+                    onclick="document.getElementById('cp-invoice-file').click()") if supplier else None,
+             Textarea("", id="cp-input", cls="chat-input", rows="1",
                       placeholder=t("cp_placeholder", lang), autocomplete="off",
                       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpSend();}"),
              Button(t("cp_send", lang), cls="chat-send", type="submit"),
@@ -387,10 +423,10 @@ def app_home(req):
     investors = list_investors()
     investor = current_investor(req, investors) if role == "investor" else None
     return Html(
-        Head(*_head("Copilot", lang)),
+        Head(*_head("Factorio AI", lang)),
         Body(Div(_topbar(lang, role, investor, investors),
                  _left_nav(role, "/app", lang),
-                 Div(_chat_center(lang), cls="ws-center"),
+                 Div(_chat_center(lang, role), cls="ws-center"),
                  Div(cls="ws-backdrop", onclick="wsToggleNav()"),
                  cls="ws", id="ws"),
              _pdf_pane(),
@@ -409,10 +445,27 @@ def _sse(event: str, data) -> str:
 async def copilot_stream(req):
     form = await req.form()
     msg = (form.get("message") or "").strip()
+    from app_routes._shared import current_role
+    role = current_role(req)
 
     async def gen():
         if not msg:
             yield _sse("done", {}); return
+        if role == "supplier":
+            from utils import ai
+            prompt = """You are Factorio AI for suppliers seeking invoice financing.
+Keep replies concise and practical. The primary journey is: ask the supplier to attach
+an invoice with the paperclip, then the application will extract it and show an indicative
+financing offer. Explain factoring and offer terms when asked. Bank statements and Open
+Banking are optional follow-ups, not prerequisites. Do not direct suppliers to an investor
+marketplace or a separate triage tool. Never promise final approval."""
+            reply = ai.chat([
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": msg},
+            ], temperature=0.2, max_tokens=500)
+            yield _sse("token", {"text": reply})
+            yield _sse("done", {})
+            return
         from utils.copilot import answer_stream
         got = False
         try:
