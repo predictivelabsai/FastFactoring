@@ -1,4 +1,4 @@
-"""Build the English Factor AI Platform Demo guide from Playwright captures."""
+"""Build the English Factorio AI Platform Demo guide from Playwright captures."""
 
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 IMG_DIR = DOCS / "img" / "platform-demo"
 DATE = date.today().isoformat()
-BASE = DOCS / f"factor_ai_platform_demo_user_guide_{DATE}_en"
-TITLE = "Factor AI Platform Demo — User Guide"
+BASE = DOCS / f"factorio_ai_platform_demo_user_guide_{DATE}_en"
+TITLE = "Factorio AI Platform Demo — User Guide"
 GREEN = RGBColor(0x1F, 0x5D, 0x43)
 INK = RGBColor(0x14, 0x23, 0x1B)
 MUTED = RGBColor(0x5C, 0x68, 0x60)
@@ -124,9 +124,9 @@ def markdown_text() -> str:
         "> Demo notice: every company, invoice, offer, integration, investment, and AI response shown here is synthetic or illustrative. "
         "The platform does not guarantee funding, payment timing, or investment returns.",
         "",
-        "This guide is a browser-driven tour of the Factor AI Platform demo. It follows the three primary roles and uses reviewed evaluation questions to demonstrate AI behavior.",
+        "This guide is a browser-driven tour of the Factorio AI Platform demo. It follows the three primary roles and uses reviewed evaluation questions to demonstrate AI behavior.",
         "",
-        "![Factor AI Platform demo](img/platform-demo/00-platform-demo.png)",
+        "![Factorio AI Platform demo](img/platform-demo/00-platform-demo.png)",
         "",
     ]
     for section, slides in SECTIONS:
@@ -200,7 +200,7 @@ def build_pptx(path: Path) -> None:
 
     slide = prs.slides.add_slide(blank)
     _bg(slide, prs, GREEN)
-    _text(slide, "FACTOR AI PLATFORM DEMO", Inches(.8), Inches(1.8), Inches(11.8),
+    _text(slide, "FACTORIO AI PLATFORM DEMO", Inches(.8), Inches(1.8), Inches(11.8),
           Inches(.5), 14, WHITE, True)
     _text(slide, "User Guide", Inches(.8), Inches(2.45), Inches(11.8),
           Inches(1), 42, WHITE, True)

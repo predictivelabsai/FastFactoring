@@ -1,4 +1,4 @@
-"""Capture the live Factor AI Platform demo for the English user guide.
+"""Capture the live Factorio AI Platform demo for the English user guide.
 
 The browser journey uses synthetic demo roles and data. It deliberately asks
 reviewed eval questions in Investor AI and the Admin Agent Fleet.

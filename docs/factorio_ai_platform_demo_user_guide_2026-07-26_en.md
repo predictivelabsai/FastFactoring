@@ -1,12 +1,12 @@
-# Factor AI Platform Demo — User Guide
+# Factorio AI Platform Demo — User Guide
 
 **Generated 2026-07-26 · Live demo: https://factorio.co.uk**
 
 > Demo notice: every company, invoice, offer, integration, investment, and AI response shown here is synthetic or illustrative. The platform does not guarantee funding, payment timing, or investment returns.
 
-This guide is a browser-driven tour of the Factor AI Platform demo. It follows the three primary roles and uses reviewed evaluation questions to demonstrate AI behavior.
+This guide is a browser-driven tour of the Factorio AI Platform demo. It follows the three primary roles and uses reviewed evaluation questions to demonstrate AI behavior.
 
-![Factor AI Platform demo](img/platform-demo/00-platform-demo.png)
+![Factorio AI Platform demo](img/platform-demo/00-platform-demo.png)
 
 ---
 
