@@ -339,7 +339,6 @@ def mail(req):
 def mail_templates(req):
     if current_role(req) != "admin":
         return RedirectResponse("/app", status_code=303)
-    import markdown
     from utils.email_templates import TEMPLATE_NAMES, render_email_template
 
     cards = []
@@ -351,7 +350,6 @@ def mail_templates(req):
         rendered = render_email_template(
             kind, first_name="Julian", resume_url="https://factorio.co.uk/app"
         )
-        body = markdown.markdown(rendered["body"], extensions=["sane_lists"])
         cards.append(Div(
             Div(Span("DRAFT ONLY", cls="text-[10px] font-mono text-amber-700"),
                 Span("Postmark not configured", cls="text-[10px] text-ink-dim"),
@@ -359,7 +357,8 @@ def mail_templates(req):
             H3(names[kind], cls="text-lg font-semibold mt-3"),
             P("Subject: " + rendered["subject"], cls="text-sm font-medium mt-2"),
             P(rendered["preheader"], cls="text-xs text-ink-muted mt-1"),
-            Div(NotStr(body), cls="prose prose-sm max-w-none mt-5 p-5 rounded-xl bg-white border border-line"),
+            Div(P(rendered["body"], cls="text-sm leading-relaxed whitespace-pre-wrap"),
+                cls="mt-5 p-5 rounded-xl bg-white border border-line"),
             cls="p-6 rounded-2xl bg-bg-elevated border border-line"))
     return app_page(
         "Borrower email templates",
