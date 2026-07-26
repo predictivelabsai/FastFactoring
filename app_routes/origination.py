@@ -184,17 +184,17 @@ def _create_demand(data: dict) -> int:
                         %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
             """, (data["invoice_number"], seller[0], company[0], data["debtor_name"],
-                  data.get("debtor_registration", ""), data.get("description", ""),
-                  data.get("sector", "other"), data["amount"], data["currency"].upper(),
+                  data.get("debtor_registration") or "", data.get("description") or "",
+                  data.get("sector") or "other", data["amount"], data["currency"].upper(),
                   data["issue_date"], data["due_date"], terms, data["risk_grade"],
-                  data.get("supplier_name", ""), data.get("supplier_registration", ""),
-                  data.get("supplier_registered_address", ""),
-                  data.get("supplier_director_name", ""),
-                  data.get("supplier_contact_email", ""),
-                  data.get("supplier_contact_phone", ""),
-                  data.get("supplier_tax_id", ""), data.get("supplier_bank_name", ""),
-                  data.get("supplier_bank_account", ""), data.get("supplier_iban", ""),
-                  data.get("supplier_swift", ""), data.get("purchase_order_number", ""),
+                  data.get("supplier_name") or "", data.get("supplier_registration") or "",
+                  data.get("supplier_registered_address") or "",
+                  data.get("supplier_director_name") or "",
+                  data.get("supplier_contact_email") or "",
+                  data.get("supplier_contact_phone") or "",
+                  data.get("supplier_tax_id") or "", data.get("supplier_bank_name") or "",
+                  data.get("supplier_bank_account") or "", data.get("supplier_iban") or "",
+                  data.get("supplier_swift") or "", data.get("purchase_order_number") or "",
                   data.get("confidence"), json.dumps(data.get("_evidence_log", []))))
             invoice_id = cur.fetchone()[0]
             cur.execute("""
@@ -368,7 +368,7 @@ async def supplier_chat_extract(req):
             _PENDING_OFFERS.pop(next(iter(_PENDING_OFFERS)), None)
         _PENDING_OFFERS[token] = pending
         req.session["supplier_offer_token"] = token
-        return JSONResponse({"ok": True, "html": _offer_html(extracted)})
+        return JSONResponse({"ok": True, "html": _offer_html(pending)})
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
