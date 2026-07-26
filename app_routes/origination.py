@@ -36,6 +36,11 @@ _SAMPLES = {
     "logistics-invoice.pdf",
     "hospitality-invoice.pdf",
 }
+_SAMPLE_SLUGS = {
+    "manufacturing": "manufacturing-invoice.pdf",
+    "logistics": "logistics-invoice.pdf",
+    "hospitality": "hospitality-invoice.pdf",
+}
 
 
 def _pdf_to_markdown(doc: pymupdf.Document) -> str:
@@ -228,11 +233,11 @@ def _page(req, message="", error="", payload="", issues=None):
     ) if payload else None
     samples = P(
         "Samples: ",
-        A("manufacturing PDF", href="/app/seller/sample/manufacturing-invoice.pdf",
+        A("manufacturing PDF", href="/app/seller/sample/manufacturing",
           download=True, cls="text-accent"), " · ",
-        A("logistics PDF", href="/app/seller/sample/logistics-invoice.pdf",
+        A("logistics PDF", href="/app/seller/sample/logistics",
           download=True, cls="text-accent"), " · ",
-        A("hospitality PDF", href="/app/seller/sample/hospitality-invoice.pdf",
+        A("hospitality PDF", href="/app/seller/sample/hospitality",
           download=True, cls="text-accent"),
         cls="text-sm text-ink-muted mt-3",
     )
@@ -279,9 +284,11 @@ def seller_origination(req):
 
 @rt("/app/seller/sample/{name}", methods=["GET"])
 def seller_invoice_sample(req, name: str):
-    if current_role(req) != "supplier" or name not in _SAMPLES:
+    filename = _SAMPLE_SLUGS.get(name, name if name in _SAMPLES else "")
+    if current_role(req) != "supplier" or not filename:
         return RedirectResponse("/app/seller", status_code=303)
-    return FileResponse(_SAMPLE_DIR / name, media_type="application/json", filename=name)
+    media_type = "application/pdf" if filename.endswith(".pdf") else "application/json"
+    return FileResponse(_SAMPLE_DIR / filename, media_type=media_type, filename=filename)
 
 
 @rt("/app/seller", methods=["POST"])
