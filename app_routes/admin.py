@@ -467,6 +467,37 @@ def supplier_home(req):
     )
 
 
+@rt("/app/supplier/profile")
+def supplier_profile(req):
+    if current_role(req) != "supplier":
+        return RedirectResponse("/app", status_code=303)
+    lang = get_lang(req)
+    details = [
+        ("Company", "Northstar Office Supplies Ltd"),
+        ("Company number", "09876543"),
+        ("Registered address", "18 Meridian Way, Manchester M1 4AB, United Kingdom"),
+        ("Contact", "Amelia Hart · finance@northstar-demo.example"),
+        ("Bank", "Demo Commercial Bank"),
+        ("Account name", "Northstar Office Supplies Ltd"),
+        ("Sort code", "12-34-56"),
+        ("Account number", "87654321"),
+        ("IBAN", "GB29 DEMO 1234 5687 6543 21"),
+        ("SWIFT / BIC", "DEMOGB2L"),
+    ]
+    rows = [Tr(Td(label, cls=_TD + " text-ink-muted"),
+               Td(value, cls=_TD + " font-medium"),
+               cls="border-b border-line") for label, value in details]
+    return app_page(
+        "My Profile",
+        Section_(Eyebrow("Supplier account"), Heading(1, "My Profile", cls="mt-4"),
+                 P("Synthetic company and settlement details used for this demo account.",
+                   cls="mt-4 text-ink-muted text-lg max-w-3xl"),
+                 cls="border-t border-line"),
+        Section_(_table(["Field", "Details"], rows), cls="border-t border-line"),
+        current_path="/app/supplier/profile", lang=lang, role="supplier",
+    )
+
+
 @rt("/app/payer")
 def payer_home(req):
     lang = get_lang(req)

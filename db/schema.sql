@@ -320,3 +320,11 @@ CREATE TABLE IF NOT EXISTS factorio.auction_bids (
     bid_advance_pct NUMERIC(5,2) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Immutable public snapshots created from the browser-based Factorio AI chat.
+CREATE TABLE IF NOT EXISTS factorio.shared_chats (
+    token       TEXT PRIMARY KEY,
+    title       TEXT NOT NULL DEFAULT 'Factorio AI chat',
+    messages    TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

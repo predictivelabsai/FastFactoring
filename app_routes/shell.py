@@ -10,12 +10,13 @@ back-office access — segregation of duties is collapsed to the single Admin ro
 from __future__ import annotations
 
 import json
+import secrets
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, Style, NotStr,
     Div, Span, A, Button, Form, Input, Textarea, P, H2,
 )
-from starlette.responses import StreamingResponse
+from starlette.responses import JSONResponse, StreamingResponse
 
 from app import rt
 from utils.i18n import t, get_lang, LANG_META, SUPPORTED_LANGS, DEFAULT_LANG
@@ -36,6 +37,7 @@ TOOLS = {
     "triage":       ("nav_triage",             "\U0001F4AC", "/app/triage"),
     "reports":      ("nav_assistant",          "\U0001F4C8", "/app/assistant"),
     "supplier":     ("nav_supplier",           "\U0001F9FE", "/app/supplier"),
+    "profile":      ("nav_profile",            "\U0001F464", "/app/supplier/profile"),
     "payer":        ("nav_payer",              "\U0001F4E9", "/app/payer"),
     "console":      ("nav_admin",              "\U0001F6E0️", "/app/admin"),
     "onboarding":   ("nav_admin_onboarding",   "\U0001FAAA", "/app/admin/onboarding"),
@@ -59,7 +61,7 @@ TOOLS = {
 _TOOLS_BY_ROLE = {
     "investor": ["dashboard", "marketplace", "auctions", "secondary", "portfolio",
                  "statement", "autoinvest", "triage", "reports"],
-    "supplier": ["supplier"],
+    "supplier": ["supplier", "profile"],
     "payer":    ["payer"],
     "admin":    ["console", "onboarding", "processing", "risk", "scoring", "funding",
                  "collections", "accounting", "compliance", "integrations",
@@ -141,6 +143,14 @@ SHELL_CSS = """
 
 /* Central Copilot chat */
 .chat { display:flex; flex-direction:column; height:100%; max-width:860px; width:100%; margin:0 auto; }
+.chat-head { display:flex; align-items:center; justify-content:space-between; padding:10px 24px;
+  border-bottom:1px solid #E3DFD2; background:#FBFAF6; }
+.chat-head-title { color:#415046; font-size:12px; font-weight:600; }
+.chat-actions { display:flex; align-items:center; gap:7px; }
+.chat-action { border:1px solid #CFC8B4; background:#fff; color:#1F5D43; border-radius:999px;
+  padding:6px 11px; cursor:pointer; font:600 12px/1 Inter,sans-serif; }
+.chat-action:hover { border-color:#1F5D43; background:#F3F1E9; }
+.chat-share-status { min-width:70px; color:#5b6b62; font-size:11px; text-align:right; }
 .chat-msgs { flex:1; overflow-y:auto; padding:28px 24px 8px; display:flex; flex-direction:column; gap:16px; }
 .chat-hero { margin:auto; text-align:center; max-width:540px; padding:24px 0; }
 .chat-hero .spark { font-size:30px; }
@@ -196,6 +206,30 @@ function cpAdd(role, html){ var m=document.getElementById('cp-msgs');
   wrap.innerHTML=html; m.appendChild(wrap); m.scrollTop=m.scrollHeight; return wrap; }
 function cpMd(t){ try{ return window.marked ? marked.parse(t) : t.replace(/\\n/g,'<br>'); }catch(e){ return t; } }
 function cpEsc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+/* ── Copy and immutable public share snapshots ────────────────────── */
+function fcVisibleMessages(){ return Array.from(document.querySelectorAll('#cp-msgs .cp-msg')).map(function(el){
+  var clone=el.cloneNode(true), who=clone.querySelector('.cp-who'); if(who) who.remove();
+  return {role:el.classList.contains('user')?'user':'assistant',content:(clone.innerText||clone.textContent||'').trim()};
+}).filter(function(x){return x.content;}); }
+function fcChatText(messages){ return messages.map(function(x){
+  return (x.role==='user'?'You':'Factorio AI')+': '+x.content;
+}).join('\\n\\n'); }
+async function fcClipboard(text){ if(navigator.clipboard&&window.isSecureContext){ await navigator.clipboard.writeText(text); return; }
+  var area=document.createElement('textarea'); area.value=text; area.style.position='fixed'; area.style.opacity='0';
+  document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); }
+function fcShareStatus(text){ var el=document.getElementById('chat-share-status'); if(!el)return;
+  el.textContent=text; clearTimeout(window._fcShareTimer); window._fcShareTimer=setTimeout(function(){el.textContent='';},2500); }
+async function fcCopyChat(){ var messages=fcVisibleMessages(); if(!messages.length){fcShareStatus('Nothing to copy');return;}
+  try{await fcClipboard(fcChatText(messages));fcShareStatus('Chat copied');}catch(e){fcShareStatus('Copy failed');} }
+async function fcShareChat(){ var messages=fcVisibleMessages(); if(!messages.length){fcShareStatus('Nothing to share');return;}
+  fcShareStatus('Creating link…');
+  try{var first=messages.filter(function(x){return x.role==='user';})[0];
+    var resp=await fetch('/app/chat/share',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:first?first.content.slice(0,80):'Factorio AI chat',messages:messages})});
+    var out=await resp.json(); if(!resp.ok)throw new Error(out.error||'Share failed');
+    await fcClipboard(location.origin+out.url); fcShareStatus('Link copied');
+  }catch(e){fcShareStatus('Share failed');} }
 
 /* ── Chat history (per-browser, localStorage) ─────────────────────── */
 function fcChats(){ try{ return JSON.parse(localStorage.getItem('fc_chats')||'[]'); }catch(e){ return []; } }
@@ -327,6 +361,14 @@ def _chat_center(lang: str, role: str = "investor"):
              if supplier else
              [Span(t(k, lang), cls="chat-card", onclick=f"cpAsk('{t(k, lang)}')") for k in _SUGGESTIONS])
     return Div(
+        Div(Span("Factorio AI conversation", cls="chat-head-title"),
+            Div(Span("", id="chat-share-status", cls="chat-share-status"),
+                Button("Copy", type="button", cls="chat-action", title="Copy conversation",
+                       onclick="fcCopyChat()"),
+                Button("Share", type="button", cls="chat-action", title="Create public read-only link",
+                       onclick="fcShareChat()"),
+                cls="chat-actions"),
+            cls="chat-head"),
         Div(hero, id="cp-msgs", cls="chat-msgs"),
         Form(Input(type="file", id="cp-invoice-file", accept=".pdf,.png,.jpg,.jpeg,.json,.txt",
                    style="display:none", onchange="fcInvoiceFile(event)") if supplier else None,
@@ -441,6 +483,76 @@ def app_home(req):
              Script(NotStr(SHELL_JS)),
              cls="bg-bg text-ink font-sans antialiased"),
         lang=_lang_of(lang))
+
+
+@rt("/app/chat/share", methods=["POST"])
+async def share_chat(req):
+    """Persist a bounded, plain-text snapshot and return its public URL."""
+    try:
+        payload = await req.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request"}, status_code=400)
+    raw_messages = payload.get("messages", [])
+    if not isinstance(raw_messages, list) or not raw_messages or len(raw_messages) > 200:
+        return JSONResponse({"error": "A chat with 1–200 messages is required"}, status_code=400)
+    messages = []
+    total = 0
+    for item in raw_messages:
+        if not isinstance(item, dict) or item.get("role") not in {"user", "assistant"}:
+            return JSONResponse({"error": "Invalid message"}, status_code=400)
+        content = str(item.get("content", "")).strip()
+        if not content:
+            continue
+        content = content[:20_000]
+        total += len(content)
+        messages.append({"role": item["role"], "content": content})
+    if not messages or total > 100_000:
+        return JSONResponse({"error": "Chat is empty or too large"}, status_code=400)
+    title = str(payload.get("title") or "Factorio AI chat").strip()[:120]
+    token = secrets.token_urlsafe(24)
+    from db import execute
+    execute(
+        "INSERT INTO factorio.shared_chats (token, title, messages) VALUES (%s, %s, %s)",
+        (token, title, json.dumps(messages)),
+    )
+    return JSONResponse({"url": f"/shared/chat/{token}"})
+
+
+@rt("/shared/chat/{token}")
+def shared_chat(req, token: str):
+    """Public, read-only conversation snapshot addressed by an unguessable token."""
+    from db import fetch_one
+    row = fetch_one(
+        "SELECT title, messages, created_at FROM factorio.shared_chats WHERE token=%s",
+        (token,),
+    )
+    if not row:
+        return Html(Head(Title("Shared chat not found")), Body(H2("Shared chat not found"))), 404
+    try:
+        messages = json.loads(row["messages"])
+    except (TypeError, json.JSONDecodeError):
+        messages = []
+    bubbles = [
+        Div(Div("You" if item["role"] == "user" else "Factorio AI", cls="shared-who"),
+            P(item["content"], cls="shared-copy"),
+            cls=f"shared-msg {item['role']}")
+        for item in messages
+    ]
+    shared_css = """
+body{margin:0;background:#F7F6F1;color:#14231B;font-family:Inter,system-ui,sans-serif}
+.shared{max-width:800px;margin:0 auto;padding:32px 20px 60px}.shared-brand{color:#1F5D43;font-weight:700}
+h1{font-size:24px;margin:18px 0 5px}.shared-date{color:#7A867E;font-size:12px;margin-bottom:30px}
+.shared-msg{margin:15px 0;max-width:88%;font-size:14px;line-height:1.55}
+.shared-msg.user{margin-left:auto;background:#1F5D43;color:white;border-radius:14px;padding:10px 14px}
+.shared-who{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#7A867E;margin-bottom:4px}
+.shared-msg.user .shared-who{color:#CFE5DA}.shared-copy{white-space:pre-wrap;margin:0}
+"""
+    return Html(
+        Head(Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1"),
+             Title(f"{row['title']} · Factorio"), Style(shared_css)),
+        Body(Div(Div("◆ Factorio", cls="shared-brand"), H2(row["title"]),
+                 P(f"Read-only conversation · {row['created_at']:%d %b %Y}", cls="shared-date"),
+                 *bubbles, cls="shared")))
 
 
 # ── Copilot streaming endpoint (hand-rolled SSE) ──────────────────────────

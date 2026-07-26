@@ -662,6 +662,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "subrole_exec":         {"en": "Executive",          "uz": "Rahbariyat",           "ru": "Руководство"},
     "subrole_super":        {"en": "Super-admin",        "uz": "Super-admin",          "ru": "Супер-админ"},
     "nav_seller":           {"en": "My applications",    "uz": "Mening arizalarim",    "ru": "Мои заявки"},
+    "nav_profile":          {"en": "My Profile",         "uz": "Mening profilim",      "ru": "Мой профиль"},
     "nav_payer":            {"en": "Invoices to confirm","uz": "Tasdiqlash uchun",     "ru": "Счета на подтверждение"},
     "nav_admin":            {"en": "Console",            "uz": "Konsol",               "ru": "Консоль"},
     "nav_admin_onboarding": {"en": "Onboarding",         "uz": "Onboarding",           "ru": "Онбординг"},

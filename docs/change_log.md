@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-26 — Shareable chats and supplier profile
+
+- Added **Copy** and **Share** controls to Factorio AI for every role. Share creates an immutable, read-only public snapshot with an unguessable URL and copies the link to the clipboard.
+- Shared snapshots store bounded plain text rather than executable chat HTML.
+- Added a supplier-only **My Profile** page with clearly synthetic company, contact, and settlement-bank details.
+
 ## 2026-07-26 — AI invoice extraction and financing origination
 
 - Moved all Factorio AI system instructions out of Python into editable, versioned Markdown files under `prompts/`, loaded through `utils/prompts.py`.
