@@ -162,6 +162,26 @@ def portfolio_context(investor: dict | None, metrics: dict,
 
     from utils.money import fmt_money as uzs  # display currency (USD default)
 
+    active_positions = [
+        p for p in positions if str(p.get("status") or "").lower() == "active"
+    ]
+    active_total = sum(float(p.get("investment_amount") or 0) for p in active_positions)
+    debtor_totals: dict[str, float] = {}
+    sector_totals: dict[str, float] = {}
+    for position in active_positions:
+        amount = float(position.get("investment_amount") or 0)
+        debtor = str(position.get("debtor_name") or "Unknown")
+        sector = str(position.get("sector") or "Unknown")
+        debtor_totals[debtor] = debtor_totals.get(debtor, 0) + amount
+        sector_totals[sector] = sector_totals.get(sector, 0) + amount
+
+    def exposure_lines(values: dict[str, float]) -> list[str]:
+        return [
+            f"- {name}: {uzs(amount)} "
+            f"({amount / active_total * 100:.1f}% of active invested)"
+            for name, amount in sorted(values.items(), key=lambda item: item[1], reverse=True)
+        ] or ["- No active exposure."]
+
     lines = [
         f"Investor: {investor.get('username', '—')}",
         f"Account value: {uzs(metrics.get('account_value'))}",
@@ -174,6 +194,12 @@ def portfolio_context(investor: dict | None, metrics: dict,
         f"(active {len(metrics.get('active', []))}, "
         f"settled {len(metrics.get('settled', []))}, "
         f"defaulted {len(metrics.get('defaulted', []))})",
+        "",
+        "Verified active exposure by debtor:",
+        *exposure_lines(debtor_totals),
+        "",
+        "Verified active exposure by sector:",
+        *exposure_lines(sector_totals),
         "",
         "Position detail (invoice | debtor | sector | grade | invested | expected | status | due):",
     ]

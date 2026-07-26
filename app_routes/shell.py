@@ -107,6 +107,12 @@ def _nav_for(role: str):
     groups = []
     for group_id, label_key, entries in _NAV_GROUPS.get(role, _NAV_GROUPS["investor"]):
         items = [(entry,) + TOOLS[entry] if isinstance(entry, str) else entry for entry in entries]
+        if role == "investor":
+            items = [
+                (key, "nav_investor_ai", icon, href) if key == "copilot"
+                else (key, i18n_key, icon, href)
+                for key, i18n_key, icon, href in items
+            ]
         groups.append((group_id, label_key, items))
     return groups
 
@@ -242,7 +248,7 @@ SHELL_JS = """
 function cpAdd(role, html){ var m=document.getElementById('cp-msgs');
   var h=document.getElementById('chat-hero'); if(h) h.remove();
   var wrap=document.createElement('div'); wrap.className='cp-msg '+role;
-  if(role==='assistant'){ var w=document.createElement('div'); w.className='cp-who'; w.textContent='Factorio AI'; wrap.appendChild(w);
+  if(role==='assistant'){ var w=document.createElement('div'); w.className='cp-who'; w.textContent=document.body.dataset.aiName||'Factorio AI'; wrap.appendChild(w);
     var body=document.createElement('div'); body.innerHTML=html; wrap.appendChild(body); m.appendChild(wrap); m.scrollTop=m.scrollHeight; return body; }
   wrap.innerHTML=html; m.appendChild(wrap); m.scrollTop=m.scrollHeight; return wrap; }
 function cpMd(t){ try{ return window.marked ? marked.parse(t) : t.replace(/\\n/g,'<br>'); }catch(e){ return t; } }
@@ -254,7 +260,7 @@ function fcVisibleMessages(){ return Array.from(document.querySelectorAll('#cp-m
   return {role:el.classList.contains('user')?'user':'assistant',content:(clone.innerText||clone.textContent||'').trim()};
 }).filter(function(x){return x.content;}); }
 function fcChatText(messages){ return messages.map(function(x){
-  return (x.role==='user'?'You':'Factorio AI')+': '+x.content;
+  return (x.role==='user'?'You':(document.body.dataset.aiName||'Factorio AI'))+': '+x.content;
 }).join('\\n\\n'); }
 async function fcClipboard(text){ if(navigator.clipboard&&window.isSecureContext){ await navigator.clipboard.writeText(text); return; }
   var area=document.createElement('textarea'); area.value=text; area.style.position='fixed'; area.style.opacity='0';
@@ -313,7 +319,10 @@ async function cpSend(ev){ if(ev&&ev.preventDefault) ev.preventDefault();
   _cpBusy=true; inp.value=''; cpAdd('user', cpEsc(msg));
   var think=cpAdd('assistant','<span class=cp-tool>thinking…</span>'); var acc=''; var bubble=null;
   try{
-    var resp=await fetch('/app/copilot/stream',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({message:msg})});
+    var active=fcActive(), saved=active?fcGet(active):null;
+    var prior=(saved&&saved.msgs)||[];
+    var resp=await fetch('/app/copilot/stream',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({message:msg,history:JSON.stringify(prior.slice(-24))})});
     var reader=resp.body.getReader(), dec=new TextDecoder(), buf='';
     while(true){ var r=await reader.read(); if(r.done) break; buf+=dec.decode(r.value,{stream:true});
       var i; while((i=buf.indexOf('\\n\\n'))!==-1){ var raw=buf.slice(0,i); buf=buf.slice(i+2);
@@ -422,17 +431,27 @@ def _chat_center(lang: str, role: str = "investor"):
                    P("Set XAI_API_KEY to enable the copilot.", cls="chat-disabled"),
                    cls="chat")
     supplier = role == "supplier"
+    investor = role == "investor"
     hero = Div(Span("✨", cls="spark"),
-               H2("Upload an invoice to get a financing offer" if supplier else t("cp_hero_title", lang)),
+               H2("Upload an invoice to get a financing offer" if supplier
+                  else t("investor_ai_hero", lang) if investor else t("cp_hero_title", lang)),
                P("Attach a digital PDF or invoice image. Factorio AI will extract the details and show how much you can receive today."
-                 if supplier else t("cp_hero_sub", lang)),
+                 if supplier else t("investor_ai_sub", lang) if investor else t("cp_hero_sub", lang)),
                id="chat-hero", cls="chat-hero")
-    cards = ([Span("How invoice financing works", cls="chat-card",
-                   onclick="cpAsk('How does invoice financing work?')")]
-             if supplier else
-             [Span(t(k, lang), cls="chat-card", onclick=f"cpAsk('{t(k, lang)}')") for k in _SUGGESTIONS])
+    if supplier:
+        cards = [Span("How invoice financing works", cls="chat-card",
+                      onclick="cpAsk('How does invoice financing work?')")]
+    elif investor:
+        cards = [
+            Span(t(key, lang), cls="chat-card", onclick=f"cpAsk('{t(key, lang)}')")
+            for key in ("investor_ai_q1", "investor_ai_q2", "investor_ai_q3", "investor_ai_q4")
+        ]
+    else:
+        cards = [Span(t(k, lang), cls="chat-card",
+                      onclick=f"cpAsk('{t(k, lang)}')") for k in _SUGGESTIONS]
+    ai_name = t("nav_investor_ai", lang) if investor else "Factorio AI"
     return Div(
-        Div(Span("Factorio AI conversation", cls="chat-head-title"),
+        Div(Span(f"{ai_name} conversation", cls="chat-head-title"),
             Div(Span("", id="chat-share-status", cls="chat-share-status"),
                 Button("Copy", type="button", cls="chat-action", title="Copy conversation",
                        onclick="fcCopyChat()"),
@@ -532,7 +551,8 @@ def app_shell(title: str, *content, current_path: str = "/app", lang: str = DEFA
                  cls="ws", id="ws"),
              _pdf_pane(),
              Script(NotStr(SHELL_JS)),
-             cls="bg-bg text-ink font-sans antialiased", data_role=role),
+             cls="bg-bg text-ink font-sans antialiased", data_role=role,
+             data_ai_name=t("nav_investor_ai", lang) if role == "investor" else "Factorio AI"),
         lang=_lang_of(lang))
 
 
@@ -545,7 +565,7 @@ def app_home(req):
     investors = list_investors()
     investor = current_investor(req, investors) if role == "investor" else None
     return Html(
-        Head(*_head("Factorio AI", lang)),
+        Head(*_head(t("nav_investor_ai", lang) if role == "investor" else "Factorio AI", lang)),
         Body(Div(_topbar(lang, role, investor, investors),
                  _left_nav(role, "/app", lang),
                  Div(_chat_center(lang, role), cls="ws-center"),
@@ -553,7 +573,8 @@ def app_home(req):
                  cls="ws", id="ws"),
              _pdf_pane(),
              Script(NotStr(SHELL_JS)),
-             cls="bg-bg text-ink font-sans antialiased", data_role=role),
+             cls="bg-bg text-ink font-sans antialiased", data_role=role,
+             data_ai_name=t("nav_investor_ai", lang) if role == "investor" else "Factorio AI"),
         lang=_lang_of(lang))
 
 
@@ -641,6 +662,15 @@ def _sse(event: str, data) -> str:
 async def copilot_stream(req):
     form = await req.form()
     msg = (form.get("message") or "").strip()
+    try:
+        raw_history = json.loads(str(form.get("history") or "[]"))
+        history = [
+            {"role": item["role"], "content": str(item.get("content") or "")[:8_000]}
+            for item in raw_history[-24:]
+            if isinstance(item, dict) and item.get("role") in {"user", "assistant"}
+        ]
+    except (TypeError, ValueError, json.JSONDecodeError):
+        history = []
     from app_routes._shared import current_role
     role = current_role(req)
 
@@ -655,6 +685,25 @@ async def copilot_stream(req):
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg},
             ], temperature=0.2, max_tokens=500)
+            yield _sse("token", {"text": reply})
+            yield _sse("done", {})
+            return
+        if role == "investor":
+            from app_routes._shared import current_investor
+            from app_routes.autoinvest import allocation_context
+            from app_routes.portfolio import _load_positions, _compute
+            from utils import ai
+            investor = current_investor(req)
+            positions = _load_positions(investor["id"]) if investor else []
+            metrics = _compute(positions)
+            context = ai.portfolio_context(investor, metrics, positions)
+            if investor:
+                context += "\n\n" + allocation_context(investor["id"])
+            system = ai.reporting_system_prompt(context, get_lang(req))
+            reply = ai.chat(
+                ai.build_conversation(system, history, msg),
+                temperature=0.2, max_tokens=700,
+            )
             yield _sse("token", {"text": reply})
             yield _sse("done", {})
             return

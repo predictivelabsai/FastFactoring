@@ -188,6 +188,10 @@ CREATE TABLE IF NOT EXISTS factorio.auto_invest (
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE factorio.auto_invest ADD COLUMN IF NOT EXISTS risk_profile TEXT NOT NULL DEFAULT 'balanced';
+ALTER TABLE factorio.auto_invest ADD COLUMN IF NOT EXISTS max_debtor_pct NUMERIC(5,2) NOT NULL DEFAULT 25;
+ALTER TABLE factorio.auto_invest ADD COLUMN IF NOT EXISTS max_term_days INT NOT NULL DEFAULT 90;
+ALTER TABLE factorio.auto_invest ADD COLUMN IF NOT EXISTS min_return_pct NUMERIC(6,2) NOT NULL DEFAULT 0;
 
 -- ── FAQ ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS factorio.faq (

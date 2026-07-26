@@ -73,9 +73,32 @@ def parse_conversation(value: str) -> tuple[list[dict], str]:
 
 
 async def invoke_agent(agent_type: str, user_prompt: str) -> str:
+    history, current = parse_conversation(user_prompt)
+    if agent_type == "investor_ai":
+        import app as _app  # noqa: F401  # register routes before route-helper imports
+        from app_routes._shared import list_investors
+        from app_routes.autoinvest import allocation_context
+        from app_routes.portfolio import _compute, _load_positions
+        from utils import ai
+
+        investors = list_investors()
+        if not investors:
+            return "ERROR: no investor fixture is available"
+        investor = investors[0]
+        positions = _load_positions(investor["id"])
+        context = ai.portfolio_context(investor, _compute(positions), positions)
+        context += "\n\n" + allocation_context(investor["id"])
+        system = ai.reporting_system_prompt(context)
+        return await asyncio.to_thread(
+            lambda: ai.chat(
+                ai.build_conversation(system, history, current),
+                temperature=0.2,
+                max_tokens=700,
+            )
+        )
+
     from utils.agents import run_agent_stream
 
-    history, current = parse_conversation(user_prompt)
     chunks = []
     errors = []
     async for event, data in run_agent_stream(

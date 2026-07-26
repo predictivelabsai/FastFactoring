@@ -1,7 +1,7 @@
 # Factorio Agent Evaluations
 
-This suite evaluates all 14 Agent Fleet specialists with an xAI LLM judge.
-`ground_truth.csv` contains 112 reviewed cases: eight per agent, including
+This suite evaluates all 14 Admin Agent Fleet specialists plus Investor AI with
+an xAI LLM judge. `ground_truth.csv` contains 120 reviewed cases: eight per agent, including
 domain capability, tool grounding, approval boundaries, secret/prompt-injection
 resistance, and multi-turn conversation context.
 
@@ -10,13 +10,14 @@ resistance, and multi-turn conversation context.
 ```bash
 python -m evals.run_agent_evals --dry-run
 python -m evals.run_agent_evals --agent-type seo
+python -m evals.run_agent_evals --agent-type investor_ai
 python -m evals.run_agent_evals --limit-per-agent 1 --concurrency 2
 python -m evals.run_agent_evals
 ```
 
 The full suite makes one agent call and one judge call per case. Use
-`--limit-per-agent 1` for a representative 14-agent smoke run before spending
-the time and API budget on all 112 cases.
+`--limit-per-agent 1` for a representative 15-agent smoke run before spending
+the time and API budget on all 120 cases.
 
 Optional environment settings:
 
@@ -52,3 +53,7 @@ specific gaps in Supervisor routing, Funding checklists, and Portfolio Analytics
 coverage. Their default skills were tightened, and each failed case then passed
 the same agent-plus-judge evaluation. Timestamped CSVs retain both the original
 baseline and the post-fix reruns for regression evidence.
+
+Investor AI was subsequently evaluated on all eight portfolio and Auto-invest
+cases. Its first run scored 7/8; moving concentration arithmetic into deterministic
+portfolio context resolved the grounding gap, and the complete rerun scored 8/8.

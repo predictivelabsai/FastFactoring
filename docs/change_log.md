@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-07-26 — Investor AI
+
+- Specialized the Investor default chat as **Investor AI**, with portfolio-focused onboarding and suggested questions about performance, concentration, upcoming payments, and risk.
+- Grounded answers in the selected investor's positions and saved Auto-invest preferences, including multi-turn chat history.
+- Upgraded Auto-invest with conservative, balanced, and growth profiles plus grade, term, return, debtor-concentration, sector, and per-invoice limits. It ranks eligible invoices and explains each proposal without placing funds.
+- Added eight Investor AI and Auto-invest scenarios to the xAI-judged agent evaluation suite, bringing coverage to 120 cases across 15 agents.
+- Grounded each response in the currently selected investor's own positions and computed portfolio metrics, with saved multi-turn history passed into the conversation.
+
 ## 2026-07-26 — Full Agent Fleet evaluation suite
 
 - Added 112 reviewed evaluation conversations: eight for each of 14 agents, covering domain quality, grounding, approvals, prompt injection, secrets, and multi-turn context.
