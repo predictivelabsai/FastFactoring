@@ -1,0 +1,23 @@
+{
+  "invoice_number": "MOCK-HSP-2026-001",
+  "supplier_name": "Zarafshan Foodservice LLC",
+  "supplier_registration": "UZ-308114730",
+  "supplier_tax_id": "308114730",
+  "supplier_bank_name": "Universalbank JSC",
+  "supplier_bank_account": "20208000400551234003",
+  "supplier_iban": "UZ3600450000551234003003",
+  "supplier_swift": "UNJSUZ22",
+  "debtor_name": "Silk Road Hotels",
+  "debtor_registration": "UZ-301772615",
+  "description": "Food-service supplies for three hotel properties",
+  "sector": "hospitality",
+  "amount": 52000000,
+  "currency": "UZS",
+  "issue_date": "2026-07-22",
+  "due_date": "2026-09-05",
+  "risk_grade": "C",
+  "financing": {
+    "advance_rate_pct": 80,
+    "fee_pct_per_30d": 2.7
+  }
+}

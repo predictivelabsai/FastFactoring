@@ -34,6 +34,7 @@ SCREENS = [
     ("10-portfolio", "/app/portfolio"),
     ("11-statement", "/app/statement"),
     ("12-auto-invest", "/app/auto-invest"),
+    ("19-invoice-upload", "/app/seller"),
 ]
 
 
@@ -54,6 +55,8 @@ def main() -> None:
             ctx.add_cookies(_cookies(lang))
             page = ctx.new_page()
             for name, path in SCREENS:
+                if name == "19-invoice-upload":
+                    ctx.add_cookies([{"name": "role", "value": "supplier", "url": BASE}])
                 if path is None:  # resolve first invoice detail
                     page.goto(BASE + "/app/marketplace", wait_until="networkidle", timeout=30_000)
                     href = page.evaluate(

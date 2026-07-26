@@ -7,3 +7,4 @@ uvicorn>=0.30.0
 langchain-openai>=0.2
 langgraph>=0.2
 fpdf2>=2.7
+PyMuPDF>=1.24

@@ -367,6 +367,28 @@ SLIDES = [
         },
     },
     {
+        "img": "19-invoice-upload",
+        "eyebrow": {"en": "Supplier app · AI origination", "ru": "Приложение поставщика · AI-origination"},
+        "title": {"en": "From invoice document to financing demand",
+                  "ru": "От документа-счёта до заявки на финансирование"},
+        "caption": {"en": "AI invoice upload and extraction",
+                    "ru": "Загрузка и AI-извлечение данных счёта"},
+        "bullets": {
+            "en": [
+                "Upload a PDF, PNG, JPEG, JSON or text invoice; three synthetic PDF samples are included for a safe demonstration.",
+                "Digital PDFs are converted to Markdown locally; only scanned/image-only invoices use the slower xAI vision fallback. Grok then extracts identities, dates, amount/currency, PO, tax/registration and bank details.",
+                "Every result includes confidence, evidence and review issues; the supplier reviews editable JSON before submission.",
+                "Submission creates the invoice and an open marketplace financing demand atomically, using the requested or default advance rate.",
+            ],
+            "ru": [
+                "Загрузите счёт в PDF, PNG, JPEG, JSON или текстовом формате; для безопасной демонстрации включены три синтетических PDF.",
+                "Цифровые PDF локально преобразуются в Markdown; более медленное xAI-зрение используется только для сканов. Grok извлекает стороны, даты, сумму/валюту, PO, налоговые и банковские данные.",
+                "Результат содержит уровень уверенности, доказательства и замечания; перед отправкой поставщик проверяет редактируемый JSON.",
+                "Отправка атомарно создаёт счёт и открытую заявку на финансирование в маркетплейсе с запрошенной или стандартной ставкой аванса.",
+            ],
+        },
+    },
+    {
         "img": "13-ai-triage",
         "eyebrow": {"en": "AI · Application triage", "ru": "AI · Триаж заявок"},
         "title": {"en": "Chat-based invoice triage", "ru": "Триаж счёта в чате"},

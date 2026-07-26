@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Factorio Update"
+  short_description: "Ship, document, deploy, and announce Factorio"
+  default_prompt: "Use $release-factorio-update to verify, document, deploy, and announce this Factorio feature."

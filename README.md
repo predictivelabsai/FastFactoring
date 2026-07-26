@@ -64,6 +64,9 @@ All config is read through `utils/config.py` `settings()` (pydantic-settings, lo
 | `APP_SECRET` | session/signing secret | `change-me` |
 | `APP_ENV` | `dev` / `production` | `dev` |
 | `PORT` | HTTP port | `5055` |
+| `XAI_API_KEY` | xAI API key for invoice extraction and assistants | — |
+| `XAI_MODEL` | Grok model used for extraction/chat | `grok-4.3` |
+| `XAI_BASE_URL` | xAI OpenAI-compatible API base URL | `https://api.x.ai/v1` |
 
 ---
 
@@ -135,6 +138,22 @@ See [CLAUDE.md](CLAUDE.md) for the full conventions reference.
 Factorio is deployed on a self-hosted [Coolify](https://coolify.io) instance as a
 Dockerfile-based application sourced from the public GitHub repo. Production runs at
 **[factorio.co.uk](https://factorio.co.uk)**.
+
+### Manual invoice-extraction test
+
+1. Open [Sign in](https://factorio.co.uk/login) and choose **Supplier**.
+2. Open [My applications](https://factorio.co.uk/app/seller).
+3. Download one of the synthetic PDF samples shown below the upload field.
+4. Upload it and click **Extract invoice fields with AI**.
+5. Check supplier/debtor, amount/currency, dates, registration, bank account,
+   IBAN and SWIFT; then click **Create financing demand**.
+6. Open the linked demand or [Marketplace](https://factorio.co.uk/app/marketplace)
+   and confirm the invoice is listed. Re-uploading the same sample should show a
+   duplicate invoice-number error instead of creating another record.
+
+Digital PDFs use local text-to-Markdown extraction. To exercise the scanned fallback,
+print a sample PDF to an image-only PDF (or upload a PNG/JPEG screenshot); only that
+path invokes xAI image understanding.
 
 **Pipeline:** push to `main` → GitHub webhook → Coolify pulls the commit, rebuilds the
 Docker image, and redeploys. No manual step.

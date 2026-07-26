@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Factorio — User Guide (2026-07-26)</title>
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<h1>Factorio — User Guide</h1>
+<h2>Invoice financing, end to end</h2>
+<p>Generated 2026-07-26 · Live at <strong>factorio.co.uk</strong></p>
+<p>Factorio is an invoice-financing (factoring) marketplace. Businesses sell their unpaid invoices for cash today; investors fund those invoices for a short-term, asset-backed return. This guide walks through every screen — the public site and the investor product app — one screen per slide.</p>
+<hr />
+<p class="eyebrow">Overview</p>
+
+<h2>What Factorio is</h2>
+<p><img alt="Factorio homepage" src="img/en-01-landing.png" /></p>
+<ul>
+<li>An invoice-financing marketplace connecting two sides: <strong>sellers</strong> who need cash now and <strong>investors</strong> seeking short-term, asset-backed returns.</li>
+<li>One site serves both — a marketing front and an HTMX-driven product app.</li>
+<li>The hero summarizes the model: advance rate, days-to-funding, sectors served and total funded volume (UZS).</li>
+<li>Fully trilingual — English, Oʻzbekcha and Russian — switched from the top navigation.</li>
+</ul>
+<hr />
+<p class="eyebrow">For sellers</p>
+
+<h2>Turn invoices into working capital</h2>
+<p><img alt="For Sellers page" src="img/en-02-for-sellers.png" /></p>
+<ul>
+<li>Get a large share of an invoice advanced in days instead of waiting 30–120 days for the debtor to pay.</li>
+<li>The seller journey: submit an invoice → get it verified and risk-graded → receive the advance → settle when the debtor pays.</li>
+<li>Factoring, not a loan — no new debt on the balance sheet; funding scales with sales.</li>
+<li>Built for manufacturing, wholesale, construction, logistics and services.</li>
+</ul>
+<hr />
+<p class="eyebrow">For investors</p>
+
+<h2>Short-term, asset-backed returns</h2>
+<p><img alt="For Investors page" src="img/en-03-for-investors.png" /></p>
+<ul>
+<li>Fund verified invoices and earn a fee/return over a short hold — often just weeks.</li>
+<li>Diversify across debtors, sectors and risk grades (A–D).</li>
+<li>Returns are tied to real receivables, not market speculation.</li>
+<li>Leads into the investor app — dashboard, marketplace and portfolio.</li>
+</ul>
+<hr />
+<p class="eyebrow">How it works</p>
+
+<h2>Four steps, end to end</h2>
+<p><img alt="How It Works page" src="img/en-04-how-it-works.png" /></p>
+<ul>
+<li><strong>Submit</strong> — a seller uploads an invoice and company details.</li>
+<li><strong>Verify</strong> — Factorio checks the debtor and assigns a risk grade and pricing.</li>
+<li><strong>Fund</strong> — the invoice appears on the marketplace; investors fund it to its goal.</li>
+<li><strong>Settle</strong> — when the debtor pays, principal + interest are distributed and the position closes.</li>
+</ul>
+<hr />
+<p class="eyebrow">How the money moves</p>
+
+<h2>Where every party's money comes from</h2>
+<p><img alt="Money &amp; payment flow — seller, payer, platform, capital" class="diagram" src="img/en-15-money-flow.png" /></p>
+<p class="caption">Money & payment flow — seller, payer, platform, capital</p>
+
+<ul>
+<li>The <strong>seller</strong> delivers goods and issues a SoliqOnline e-invoice; the <strong>payer (debtor)</strong> owes the invoice amount.</li>
+<li>The platform advances ~85% to the seller now, funded by the <strong>capital source</strong> — the bank's balance sheet, investors, or the DIFC SPV.</li>
+<li>At maturity the <strong>payer pays 100%</strong> into the collection account; the seller receives the net balance, the capital source gets principal + return, and the platform keeps a volume-based fee.</li>
+<li>The flow is identical whoever funds it — which is what makes the investor / SPV layer pluggable.</li>
+</ul>
+<hr />
+<p class="eyebrow">Journey · Borrower (origination)</p>
+
+<h2>The seller's journey, end to end</h2>
+<p><img alt="From sign-up to advance in 24–48 hours" class="diagram" src="img/en-16-origination-journey.png" /></p>
+<p class="caption">From sign-up to advance in 24–48 hours</p>
+
+<ul>
+<li>Sign up (bank KYC) → invoice auto-imported from SoliqOnline → request financing in an AI-triage chat.</li>
+<li>Debtor scoring returns indicative terms; the bank approves in one click; collateral is registered with the CBU in under an hour.</li>
+<li>The advance lands in the seller's account in 24–48 hours — no branch visit, no paper.</li>
+</ul>
+<hr />
+<p class="eyebrow">Journey · Investor</p>
+
+<h2>The investor's journey, end to end</h2>
+<p><img alt="From onboarding to distribution" class="diagram" src="img/en-17-investor-journey.png" /></p>
+<p class="caption">From onboarding to distribution</p>
+
+<ul>
+<li>Onboard (KYC / accreditation) → commit capital via the marketplace or the SPV → auto-invest or pick invoices.</li>
+<li>Hold the position with AI portfolio reporting on demand; when the debtor pays at maturity, principal + return are distributed.</li>
+<li><strong>Decomposable:</strong> the origination piece (bank-funded) can launch first; the investor marketplace and SPV plug in later, independently.</li>
+</ul>
+<hr />
+<p class="eyebrow">Pricing</p>
+
+<h2>Transparent, per-invoice fees</h2>
+<p><img alt="Pricing page" src="img/en-05-pricing.png" /></p>
+<ul>
+<li>Pricing is per invoice — a fee per 30 days against the advanced amount, with no hidden charges.</li>
+<li>Shows the headline advance rate and worked example economics.</li>
+<li>No subscription and no commitment to submit an invoice.</li>
+<li>A clear breakdown so both sides understand the return and the cost.</li>
+</ul>
+<hr />
+<p class="eyebrow">Contact</p>
+
+<h2>Get in touch</h2>
+<p><img alt="Contact page" src="img/en-06-contact.png" /></p>
+<ul>
+<li>A contact page for sellers and investors to reach the Factorio team.</li>
+<li>Shows the contact email and a simple enquiry form.</li>
+<li>The entry point to start onboarding.</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Dashboard</p>
+
+<h2>Your personalized overview</h2>
+<p><img alt="Investor dashboard" src="img/en-07-dashboard.png" /></p>
+<ul>
+<li>The <code>/app</code> home greets the current investor and leads with their own KPIs: portfolio value, net annual return, earned-to-date and the next settlement.</li>
+<li>A recent-activity feed surfaces notifications — fundings, settlements and updates.</li>
+<li>Quick actions jump to the marketplace, portfolio and statement.</li>
+<li>Platform-wide stats are kept as a secondary strip.</li>
+<li>Top-right <strong>investor switcher</strong> lets you view the app as any investor (demo, no password).</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Marketplace</p>
+
+<h2>Browse fundable invoices</h2>
+<p><img alt="Marketplace listings" src="img/en-08-marketplace.png" /></p>
+<ul>
+<li>Every open, fundable invoice is a card: debtor, sector, risk grade, amount and a live funding-progress bar.</li>
+<li>Each card shows the key economics — advance rate, fee per 30 days and estimated return — plus the target hold in days.</li>
+<li>The filter bar narrows by sector, risk grade, maximum term and minimum return.</li>
+<li>Click a card to open the full invoice detail.</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Invoice detail</p>
+
+<h2>Full transparency before you invest</h2>
+<p><img alt="Invoice detail page" src="img/en-09-marketplace-detail.png" /></p>
+<ul>
+<li>The headline shows the debtor, risk grade, sector and invoice number.</li>
+<li>A funding panel: amount raised vs goal, advance rate, fee and estimated return.</li>
+<li>A <strong>debtor-company profile</strong> lists registration number, sector, country and annual turnover.</li>
+<li>Everything needed to make a funding decision on a single screen.</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Portfolio</p>
+
+<h2>The reporting cockpit</h2>
+<p><img alt="Portfolio cockpit" src="img/en-10-portfolio.png" /></p>
+<ul>
+<li>Two hero panels: <strong>net annual return</strong> (interest received, write-offs, net income) and <strong>account value</strong> (active invested, expected outstanding, realized).</li>
+<li>An <strong>investments aging table</strong> buckets active positions by days to / past due.</li>
+<li>A <strong>payment-habits table</strong> shows how settled invoices actually paid — early, on time, late or written off.</li>
+<li>A positions table lists every investment with realized return, settlement date, grade and status.</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Account statement</p>
+
+<h2>Every transaction, filterable</h2>
+<p><img alt="Account statement" src="img/en-11-statement.png" /></p>
+<ul>
+<li>A unified ledger of cash movements: investments out (−) and settlements in (+).</li>
+<li>Filter by date range, type, counterparty, invoice number and minimum amount.</li>
+<li>Signed amounts in UZS, newest first.</li>
+<li>One-click <strong>CSV export</strong> for bookkeeping and reconciliation.</li>
+</ul>
+<hr />
+<p class="eyebrow">Investor app · Auto-invest</p>
+
+<h2>Set rules, invest automatically</h2>
+<p><img alt="Auto-invest settings" src="img/en-12-auto-invest.png" /></p>
+<ul>
+<li>Configure automated bidding: minimum risk grade, maximum amount per invoice and preferred sectors.</li>
+<li>Toggle the strategy active/inactive; the status is shown at the top.</li>
+<li>Rules are saved per investor and applied to matching new invoices.</li>
+<li>Modelled on investly.co's autobidder.</li>
+</ul>
+<hr />
+<p class="eyebrow">Supplier app · AI origination</p>
+
+<h2>From invoice document to financing demand</h2>
+<p><img alt="AI invoice upload and extraction" src="img/en-19-invoice-upload.png" /></p>
+<ul>
+<li>Upload a PDF, PNG, JPEG, JSON or text invoice; three synthetic PDF samples are included for a safe demonstration.</li>
+<li>Digital PDFs are converted to Markdown locally; only scanned/image-only invoices use the slower xAI vision fallback. Grok then extracts identities, dates, amount/currency, PO, tax/registration and bank details.</li>
+<li>Every result includes confidence, evidence and review issues; the supplier reviews editable JSON before submission.</li>
+<li>Submission creates the invoice and an open marketplace financing demand atomically, using the requested or default advance rate.</li>
+</ul>
+<hr />
+<p class="eyebrow">AI · Application triage</p>
+
+<h2>Chat-based invoice triage</h2>
+<p><img alt="AI triage assistant" src="img/en-13-ai-triage.png" /></p>
+<ul>
+<li>Sellers describe an invoice and debtor in plain language; the assistant collects only what is still missing.</li>
+<li>It returns an <strong>indicative risk band (A–D)</strong>, an <strong>advance rate</strong> and the <strong>documents the bank needs next</strong> — in seconds, not days.</li>
+<li>Powered by <strong>Grok (x.ai)</strong>; everything is indicative and subject to verification — no final decision is automated.</li>
+<li>Fully trilingual — the assistant replies in the visitor's language (English, Oʻzbekcha, Russian).</li>
+</ul>
+<hr />
+<p class="eyebrow">AI · Portfolio reporting</p>
+
+<h2>Ask your portfolio anything</h2>
+<p><img alt="AI reporting assistant" src="img/en-14-ai-assistant.png" /></p>
+<ul>
+<li>Investors ask questions in natural language — net return, exposure by sector or debtor, overdue positions, upcoming settlements.</li>
+<li>Answers are <strong>grounded in the investor's own live positions</strong> — every figure traces back to real portfolio data, not invented.</li>
+<li>Concrete and specific: it quotes actual amounts and invoice numbers, and says so plainly when the data can't answer.</li>
+<li>The conversational layer on top of the portfolio cockpit — reporting on demand, in the investor's language.</li>
+</ul>
+<hr />
+<p class="eyebrow">Get started</p>
+
+<h2>Start with Factorio</h2>
+<ul>
+<li><strong>Sellers</strong> — submit an invoice and get an offer in 1–3 working days.</li>
+<li><strong>Investors</strong> — browse the marketplace, build a portfolio, automate with auto-invest.</li>
+<li>Live at <strong>factorio.co.uk</strong> · hello@factorio.co.uk</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "invoice_number": "MOCK-LOG-2026-001",
+  "supplier_name": "TransOxus Logistics LLC",
+  "supplier_registration": "UZ-305228641",
+  "supplier_tax_id": "305228641",
+  "supplier_bank_name": "Universalbank JSC",
+  "supplier_bank_account": "20208000600987654002",
+  "supplier_iban": "UZ1700450000987654002002",
+  "supplier_swift": "UNJSUZ22",
+  "debtor_name": "Central Asia Retail Group LLC",
+  "debtor_registration": "UZ-309441205",
+  "description": "Regional freight and warehousing services",
+  "sector": "logistics",
+  "amount": 94000000,
+  "currency": "UZS",
+  "issue_date": "2026-07-20",
+  "due_date": "2026-08-19",
+  "risk_grade": "B",
+  "financing": {
+    "funding_goal": 79900000,
+    "advance_rate_pct": 85,
+    "fee_pct_per_30d": 2.1
+  }
+}

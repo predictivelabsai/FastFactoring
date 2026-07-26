@@ -1,0 +1,23 @@
+{
+  "invoice_number": "MOCK-MFG-2026-001",
+  "supplier_name": "Samarkand Precision Works LLC",
+  "supplier_registration": "UZ-307551920",
+  "supplier_tax_id": "307551920",
+  "supplier_bank_name": "Universalbank JSC",
+  "supplier_bank_account": "20208000900123456001",
+  "supplier_iban": "UZ7400450000123456001001",
+  "supplier_swift": "UNJSUZ22",
+  "debtor_name": "Tashkent Industrial Components JSC",
+  "debtor_registration": "UZ-302991847",
+  "description": "CNC-machined pump assemblies, June delivery",
+  "sector": "manufacturing",
+  "amount": 185000000,
+  "currency": "UZS",
+  "issue_date": "2026-07-15",
+  "due_date": "2026-09-13",
+  "risk_grade": "A",
+  "financing": {
+    "advance_rate_pct": 90,
+    "fee_pct_per_30d": 1.8
+  }
+}

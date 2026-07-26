@@ -53,6 +53,18 @@ CREATE INDEX IF NOT EXISTS invoices_seller_idx ON factorio.invoices(seller_id);
 CREATE INDEX IF NOT EXISTS invoices_company_idx ON factorio.invoices(company_id);
 CREATE INDEX IF NOT EXISTS invoices_due_date_idx ON factorio.invoices(due_date);
 
+-- Extracted payment/origination metadata (nullable for legacy seeded invoices).
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_registration TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_tax_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_bank_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_bank_account TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_iban TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_swift TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS purchase_order_number TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS extraction_confidence NUMERIC(5,2);
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS extraction_evidence TEXT NOT NULL DEFAULT '';
+
 -- ── Invoice Funding (funding round per invoice) ────────────────────────
 CREATE TABLE IF NOT EXISTS factorio.invoice_funding (
     id                          BIGSERIAL PRIMARY KEY,

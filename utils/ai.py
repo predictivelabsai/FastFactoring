@@ -17,14 +17,17 @@ Config is read through ``settings()`` (``XAI_API_KEY`` / ``XAI_MODEL`` /
 from __future__ import annotations
 
 import json
+import base64
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 from utils.config import settings
 
 # Roughly how many recent turns of a conversation we keep in-context.
 MAX_HISTORY_TURNS = 12
 _TIMEOUT_S = 60
+_INVOICE_PROMPT = Path(__file__).resolve().parents[1] / "prompts" / "invoice_financing_extraction.md"
 
 
 def ai_available() -> bool:
@@ -71,6 +74,55 @@ def chat(messages: list[dict], *, temperature: float = 0.3,
         return f"The AI assistant is temporarily unavailable (HTTP {e.code}). {detail}"
     except (urllib.error.URLError, KeyError, ValueError, TimeoutError) as e:
         return f"The AI assistant is temporarily unavailable ({type(e).__name__})."
+
+
+def extract_invoice(*, text: str = "",
+                    images: list[tuple[bytes, str]] | None = None) -> dict:
+    """Extract financing fields from Markdown or, for scans, invoice images."""
+    cfg = settings()
+    if not cfg.xai_api_key:
+        raise RuntimeError("Invoice extraction is unavailable: XAI_API_KEY is not configured.")
+    template = _INVOICE_PROMPT.read_text(encoding="utf-8")
+    prompt = template.replace("{invoice_text}", text[:40_000] or "[Read the attached invoice image.]")
+    user_content: str | list[dict] = prompt
+    if images:
+        user_content = []
+        for image_bytes, image_mime in images:
+            encoded = base64.b64encode(image_bytes).decode("ascii")
+            user_content.append(
+                {"type": "image_url", "image_url": {
+                    "url": f"data:{image_mime};base64,{encoded}", "detail": "high"}})
+        user_content.append({"type": "text", "text": prompt})
+    payload = json.dumps({
+        "model": cfg.xai_model,
+        "messages": [
+            {"role": "system", "content": "Extract invoice data precisely. Return JSON only."},
+            {"role": "user", "content": user_content},
+        ],
+        "temperature": 0,
+        "max_tokens": 2400,
+        "response_format": {"type": "json_object"},
+        "stream": False,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{cfg.xai_base_url.rstrip('/')}/chat/completions", data=payload,
+        headers={"Authorization": f"Bearer {cfg.xai_api_key}",
+                 "Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        content = result["choices"][0]["message"]["content"].strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1].rsplit("```", 1)[0]
+        parsed = json.loads(content)
+        if not isinstance(parsed.get("invoice_data"), dict):
+            raise ValueError("response has no invoice_data object")
+        return parsed
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "ignore")[:300]
+        raise RuntimeError(f"xAI extraction failed (HTTP {exc.code}): {detail}") from exc
+    except (urllib.error.URLError, KeyError, ValueError, TimeoutError) as exc:
+        raise RuntimeError(f"xAI extraction failed ({type(exc).__name__}).") from exc
 
 
 def build_conversation(system_prompt: str, history: list[dict],
