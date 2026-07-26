@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-26 — Global display currency
+
+- Set USD as the platform default display currency instead of UZS.
+- Added an Admin-only global setting for USD, GBP, EUR, or UZS. The persisted override applies to shared monetary views while leaving source invoice currencies unchanged.
+
 ## 2026-07-26 — Shareable chats and supplier profile
 
 - Added **Copy** and **Share** controls to Factorio AI for every role. Share creates an immutable, read-only public snapshot with an unguessable URL and copies the link to the clipboard.

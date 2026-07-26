@@ -328,3 +328,13 @@ CREATE TABLE IF NOT EXISTS factorio.shared_chats (
     messages    TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS factorio.platform_settings (
+    key         TEXT PRIMARY KEY,
+    value       TEXT NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO factorio.platform_settings (key, value)
+VALUES ('display_currency', 'USD')
+ON CONFLICT (key) DO NOTHING;

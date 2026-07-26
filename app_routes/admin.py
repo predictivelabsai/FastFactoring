@@ -16,6 +16,7 @@ from datetime import date, datetime
 
 from fasthtml.common import (
     Div, P, Span, A, Article, Table, Thead, Tbody, Tr, Th, Td, NotStr, Titled,
+    Form, Select, Option, Button,
 )
 from starlette.responses import RedirectResponse
 
@@ -222,6 +223,43 @@ def admin_console(req):
 
     sections = Div(*[_group(k, items) for k, items in groups], cls="mt-2")
     return _admin_page(req, "/app/admin", "admin_h1", kpis, sections)
+
+
+@rt("/app/admin/settings", methods=["GET", "POST"])
+async def admin_global_settings(req):
+    g = _guard(req)
+    if g:
+        return g
+    from utils.money import SUPPORTED_CURRENCIES, display_currency, set_display_currency
+    message = ""
+    if req.method == "POST":
+        form = await req.form()
+        try:
+            selected = set_display_currency(str(form.get("currency", "")))
+            message = f"Global display currency changed to {selected}."
+            log_action("admin", current_subrole(req), "settings.currency", "platform", selected)
+        except ValueError:
+            message = "Choose USD, GBP, EUR, or UZS."
+    current = display_currency()
+    selector = Form(
+        Select(*[Option(code, value=code, selected=code == current)
+                 for code in SUPPORTED_CURRENCIES],
+               name="currency",
+               cls="px-4 py-2.5 rounded-xl border border-line-bright bg-bg-elevated"),
+        Button("Save global currency", type="submit",
+               cls="px-5 py-2.5 rounded-full bg-accent text-bg font-medium"),
+        method="post", action="/app/admin/settings",
+        cls="flex flex-wrap items-center gap-3",
+    )
+    return _admin_page(
+        req, "/app/admin/settings", "nav_global_settings",
+        P(message, cls="mb-5 text-green-700") if message else None,
+        P("Controls the display currency across dashboards, marketplace, portfolio, "
+          "accounting, and other shared monetary views. Synthetic UZS-scale values "
+          "are converted using the demo rates; source invoice currency remains unchanged.",
+          cls="mb-5 text-ink-muted max-w-3xl"),
+        selector,
+    )
 
 
 # Onboarding & facility limits are now the production module in app_routes/onboarding.py.

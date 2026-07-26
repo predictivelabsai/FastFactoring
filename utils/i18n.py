@@ -665,6 +665,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "nav_profile":          {"en": "My Profile",         "uz": "Mening profilim",      "ru": "Мой профиль"},
     "nav_payer":            {"en": "Invoices to confirm","uz": "Tasdiqlash uchun",     "ru": "Счета на подтверждение"},
     "nav_admin":            {"en": "Console",            "uz": "Konsol",               "ru": "Консоль"},
+    "nav_global_settings":  {"en": "Global settings",    "uz": "Global sozlamalar",    "ru": "Глобальные настройки"},
     "nav_admin_onboarding": {"en": "Onboarding",         "uz": "Onboarding",           "ru": "Онбординг"},
     "nav_admin_risk":       {"en": "Risk",               "uz": "Xavf",                 "ru": "Риск"},
     "nav_admin_funding":    {"en": "Funding",            "uz": "Moliyalashtirish",     "ru": "Финансирование"},
