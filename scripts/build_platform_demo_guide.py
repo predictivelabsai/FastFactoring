@@ -107,6 +107,10 @@ SECTIONS = [
          ["Audit records identify actor, action, entity, detail, and time.",
           "Use the log to inspect human and agent activity, approvals, and configuration changes.",
           "Prompt-version history and action logs support governance of the agentic platform."]),
+        ("20-admin-email-templates.png", "Prepare borrower transactional emails",
+         ["Customer Service can render Factorio-branded bank-connection and accounting-connection reminders from checked-in Markdown templates.",
+          "Each draft uses a personalized HTTPS resume link, support contact, and application-specific wording without sensitive bank or accounting credentials.",
+          "Delivery is disabled in this demo until Postmark, a verified sender, approval/lifecycle triggers, audit records, and delivery webhooks are configured."]),
     ]),
 ]
 

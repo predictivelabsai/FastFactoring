@@ -172,6 +172,14 @@ This guide is a browser-driven tour of the Factor AI Platform demo. It follows t
 - Use the log to inspect human and agent activity, approvals, and configuration changes.
 - Prompt-version history and action logs support governance of the agentic platform.
 
+## Prepare borrower transactional emails
+
+![Prepare borrower transactional emails](img/platform-demo/20-admin-email-templates.png)
+
+- Customer Service can render Factorio-branded bank-connection and accounting-connection reminders from checked-in Markdown templates.
+- Each draft uses a personalized HTTPS resume link, support contact, and application-specific wording without sensitive bank or accounting credentials.
+- Delivery is disabled in this demo until Postmark, a verified sender, approval/lifecycle triggers, audit records, and delivery webhooks are configured.
+
 ---
 
 # Suggested demo script

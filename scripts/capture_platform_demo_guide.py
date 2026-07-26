@@ -115,6 +115,8 @@ def main() -> None:
         shot(page, "18-admin-integrations.png", full=True)
         visit(page, "/app/admin/audit")
         shot(page, "19-admin-audit.png", full=True)
+        visit(page, "/app/mail/templates")
+        shot(page, "20-admin-email-templates.png", full=True)
 
         browser.close()
     log.info("captured %d guide screenshots from %s", len(list(OUT.glob("*.png"))), BASE_URL)
