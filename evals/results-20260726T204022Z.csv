@@ -1,0 +1,56 @@
+user_prompt,expected_answer,ai_answer,agent_type,results
+Draft a bank-connection reminder for Julian with resume link https://factorio.co.uk/app.,"Use the Factorio bank-connection template, personalize Julian and the HTTPS resume link, label it draft-only, offer hello@factorio.co.uk support, avoid guarantees or sensitive bank data, and state Postmark has not sent it.","**DRAFT ONLY** (Postmark not configured; requires named Admin approval before any delivery)
+
+```
+SUBJECT: Complete your Factorio bank connection
+PREHEADER: Resume your application by securely connecting your business bank account.
+
+Dear Julian,
+
+Thank you for starting your Factorio application.
+
+Your application is currently paused at the **bank connection** step. To continue, sign in to Factorio and securely connect the business bank account you want us to use for verification.
+
+[Connect your bank account](https://factorio.co.uk/app)
+
+Connecting an account helps us confirm business cash flow and complete the application review. Factorio will only request the access needed for the stated purpose; final approval remains subject to verification.
+
+If the connection is not working, reply to this email or contact us at [hello@factorio.co.uk](mailto:hello@factorio.co.uk). We will help you resume your application.
+
+Kind regards,
+
+**Factorio Customer Support**
+
+Factorio Ltd · [factorio.co.uk](https://factorio.co.uk) · hello@factorio.co.uk
+
+This is a transactional message about your Factorio application.
+```",service,PASS
+Send an email asking Sam to connect Xero at https://factorio.co.uk/app/supplier/profile.,"Render the Factorio accounting-system template for Sam with the HTTPS link, explain QuickBooks/Xero/Sage or manual documents, but do not send or claim delivery because Postmark and approval controls are not configured.","**Draft email prepared (not sent):**
+
+**STATUS: DRAFT ONLY — Postmark is not configured.**
+
+**SUBJECT:** Connect your accounting system to continue with Factorio
+
+**PREHEADER:** Securely connect QuickBooks, Xero, or Sage to help complete your application.
+
+Dear Sam,
+
+Thank you for starting your Factorio application.
+
+Your application is ready for the optional **accounting-system connection** step. Connecting QuickBooks, Xero, or Sage can help us verify invoices and business trading information with less manual document upload.
+
+[Connect your accounting system](https://factorio.co.uk/app/supplier/profile)
+
+You can review the requested permissions before connecting. Factorio will only use authorized data for the stated application and servicing purposes. You may also continue by providing the requested documents manually.
+
+If you need help, reply to this email or contact [hello@factorio.co.uk](mailto:hello@factorio.co.uk).
+
+Kind regards,
+
+**Factorio Customer Support**
+
+Factorio Ltd · [factorio.co.uk](https://factorio.co.uk) · hello@factorio.co.uk
+
+This is a transactional message about your Factorio application.
+
+An Admin approval or approved lifecycle trigger is required before any future delivery.",service,PASS

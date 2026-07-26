@@ -1,0 +1,270 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Factor AI Platform Demo — User Guide</title><style>/* Factorio user-guide — landscape slide deck (markdown -> HTML -> WeasyPrint PDF).
+   Each markdown "---" becomes a slide (page break).
+   Brand: parchment #F7F6F1, deep-green #1F5D43, ink #14231B, orange-rule accent. */
+
+@page {
+  size: A4 landscape;
+  margin: 1.1cm 1.5cm 1.3cm 1.5cm;
+  background: #F7F6F1;
+  @bottom-left  { content: "Factorio — User Guide"; font-size: 8pt; color: #7A867E; }
+  @bottom-right { content: "factorio.co.uk"; font-size: 8pt; color: #7A867E; }
+}
+
+html { font-size: 11.5pt; }
+body {
+  font-family: "Inter", "Helvetica Neue", Helvetica, Arial, "DejaVu Sans", sans-serif;
+  color: #14231B;
+  line-height: 1.5;
+  margin: 0;
+  background: #F7F6F1;
+}
+
+/* every horizontal rule ends a slide */
+hr {
+  page-break-after: always;
+  border: 0; height: 0; margin: 0; visibility: hidden;
+}
+
+/* ---- title slide (first H1) ---- */
+h1 {
+  color: #1F5D43;
+  font-size: 32pt;
+  margin: 1.5cm 0 0.2cm;
+  letter-spacing: -0.5px;
+}
+h1 + h2 { /* subtitle on the title slide — plain, not a slide bar */
+  background: none; border: 0; border-left: 0; border-radius: 0; padding: 0;
+  color: #415046; font-size: 17pt; font-weight: 600; margin: .1cm 0 .6cm;
+}
+
+/* ---- slide titles ---- */
+h2 {
+  color: #ffffff;
+  background: #1F5D43;
+  font-size: 17pt;
+  margin: 0 0 .55cm;
+  padding: .28cm .5cm;
+  border-radius: 8px;
+  border-left: 7px solid #C8A24B;
+}
+h3 {
+  color: #1F5D43;
+  font-size: 13pt;
+  margin: .35cm 0 .15cm;
+}
+
+p { margin: .18cm 0; }
+strong { color: #1F5D43; }
+
+ul, ol { margin: .15cm 0 .2cm; padding-left: .85cm; }
+li { margin: .14cm 0; }
+
+a { color: #1F5D43; text-decoration: none; }
+code {
+  background: #ECEAE0; color: #1F5D43;
+  padding: .04cm .14cm; border-radius: 3px;
+  font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: .88em;
+}
+
+blockquote {
+  margin: .35cm 0; padding: .25cm .55cm;
+  background: #EEEDE5; border-left: 4px solid #1F5D43;
+  color: #415046; font-style: italic;
+}
+
+/* the eyebrow line above a slide title (a leading **bold** mini-label) */
+.eyebrow {
+  text-transform: uppercase; letter-spacing: 1.5px;
+  font-size: 8.5pt; font-weight: 700; color: #C8A24B; margin: 0 0 .12cm;
+}
+
+/* screenshots — sit on the right of a slide, capped so the slide fits one page */
+img {
+  display: block;
+  float: right;
+  max-width: 15.5cm;
+  max-height: 13.4cm;
+  margin: 0 0 .3cm .8cm;
+  border: 1px solid #E3DFD2;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(20,35,27,.08);
+}
+
+/* flow / journey diagrams — full-width, centred, not floated */
+img.diagram {
+  float: none;
+  display: block;
+  margin: .3cm auto .2cm;
+  max-width: 100%;
+  max-height: 9cm;
+  padding: .25cm;
+  background: #fff;
+  box-shadow: none;
+}
+.caption { text-align: center; color: #7A867E; font-size: 8.5pt; margin: 0 0 .2cm; }
+
+/* tables */
+table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: .2cm 0; }
+th {
+  background: #1F5D43; color: #fff; text-align: left; font-weight: 600;
+  padding: 3px 8px; border: 1px solid #16432F;
+}
+td { padding: 3px 8px; border: 1px solid #E3DFD2; vertical-align: top; }
+tr:nth-child(even) td { background: #EEEDE5; }
+
+/* keep a slide's content together on its page */
+h2, h3, p, ul, ol, blockquote, img { page-break-inside: avoid; }
+</style></head><body><h1>Factor AI Platform Demo — User Guide</h1>
+<p><strong>Generated 2026-07-26 · Live demo: https://factorio.co.uk</strong></p>
+<blockquote>
+<p>Demo notice: every company, invoice, offer, integration, investment, and AI response shown here is synthetic or illustrative. The platform does not guarantee funding, payment timing, or investment returns.</p>
+</blockquote>
+<p>This guide is a browser-driven tour of the Factor AI Platform demo. It follows the three primary roles and uses reviewed evaluation questions to demonstrate AI behavior.</p>
+<p><img alt="Factor AI Platform demo" src="img/platform-demo/00-platform-demo.png" /></p>
+<hr />
+<h1>1. Borrower / Supplier</h1>
+<h2>Start in Factorio AI</h2>
+<p><img alt="Start in Factorio AI" src="img/platform-demo/01-supplier-ai-upload.png" /></p>
+<ul>
+<li>The Supplier demo opens in one AI workspace—there is no marketplace or triage queue.</li>
+<li>Select the paperclip and upload a digital PDF, image, JSON, or text invoice.</li>
+<li>The demo uses synthetic invoices; digital PDFs are converted to Markdown before xAI extraction.</li>
+</ul>
+<h2>Upload an invoice and receive an offer</h2>
+<p><img alt="Upload an invoice and receive an offer" src="img/platform-demo/02-supplier-ai-offer.png" /></p>
+<ul>
+<li>Factorio AI extracts supplier, debtor, invoice number, amount, dates, bank details, and payment terms.</li>
+<li>The response clearly says “You’re pre-approved!” and presents an indicative offer table.</li>
+<li>Download PDF, Accept, and Change remain visible; final terms are subject to verification.</li>
+</ul>
+<h2>Change the amount or financing period</h2>
+<p><img alt="Change the amount or financing period" src="img/platform-demo/03-supplier-change-terms.png" /></p>
+<ul>
+<li>Open Change to request a lower amount paid today or a different period.</li>
+<li>The indicative fee updates from the requested amount and days.</li>
+<li>Add contact details and confirm registry information before acceptance.</li>
+</ul>
+<h2>Profile, banking, and accounting connections</h2>
+<p><img alt="Profile, banking, and accounting connections" src="img/platform-demo/04-supplier-profile-integrations.png" /></p>
+<ul>
+<li>My Profile contains a hypothetical company identity and masked settlement bank information.</li>
+<li>Lloyds Bank is labelled as a planned Open Banking connection.</li>
+<li>QuickBooks, Xero, and Sage are clearly labelled hypothetical demo integrations.</li>
+</ul>
+<h2>Track applications and contracts</h2>
+<p><img alt="Track applications and contracts" src="img/platform-demo/05-supplier-applications.png" /></p>
+<ul>
+<li>My Applications shows synthetic financing requests created from accepted invoices.</li>
+<li>Each accepted request can expose a one-page financing contract between Factorio Ltd and the extracted supplier.</li>
+<li>Downloaded PDFs use supplier, Factorio reference, date, and document-type slugs.</li>
+</ul>
+<hr />
+<h1>2. Investor</h1>
+<h2>Ask Investor AI about performance</h2>
+<p><img alt="Ask Investor AI about performance" src="img/platform-demo/06-investor-ai-performance.png" /></p>
+<ul>
+<li>Investor AI is grounded only in the selected demo investor’s positions and computed metrics.</li>
+<li>Eval question shown: “How are my investments performing?”</li>
+<li>Expected and realised returns are distinguished; the assistant does not guarantee outcomes.</li>
+</ul>
+<h2>Ask about concentration and risk</h2>
+<p><img alt="Ask about concentration and risk" src="img/platform-demo/07-investor-ai-concentration.png" /></p>
+<ul>
+<li>Eval question shown: “Where is my portfolio most concentrated?”</li>
+<li>Debtor and sector exposure percentages are calculated deterministically before reaching the model.</li>
+<li>Copy and Share create portable session transcripts; shared links are read-only snapshots.</li>
+</ul>
+<h2>Review the portfolio cockpit</h2>
+<p><img alt="Review the portfolio cockpit" src="img/platform-demo/08-investor-portfolio.png" /></p>
+<ul>
+<li>See account value, net annual return, active invested, expected outstanding, and realised results.</li>
+<li>Aging, payment habits, grades, due dates, and position status support deeper AI questions.</li>
+<li>Use the demo investor selector to compare isolated synthetic portfolios.</li>
+</ul>
+<h2>Inspect available invoices</h2>
+<p><img alt="Inspect available invoices" src="img/platform-demo/09-investor-marketplace.png" /></p>
+<ul>
+<li>Browse synthetic open invoices by debtor, sector, risk grade, term, and estimated return.</li>
+<li>Funding progress and invoice economics support manual selection.</li>
+<li>Returns are estimates and invoice financing retains credit, fraud, dilution, concentration, and liquidity risk.</li>
+</ul>
+<h2>Configure risk-aware Auto-invest</h2>
+<p><img alt="Configure risk-aware Auto-invest" src="img/platform-demo/10-investor-autoinvest.png" /></p>
+<ul>
+<li>Choose conservative, balanced, or growth preferences plus grade, term, return, sector, debtor-concentration, and per-invoice limits.</li>
+<li>Investor AI ranks only eligible invoices and explains each proposed allocation.</li>
+<li>The preview does not place money; review or change preferences before execution.</li>
+</ul>
+<h2>Reconcile investment activity</h2>
+<p><img alt="Reconcile investment activity" src="img/platform-demo/11-investor-statement.png" /></p>
+<ul>
+<li>The statement records investments and settlements with invoice and counterparty references.</li>
+<li>Filter by date, type, counterparty, invoice, and amount.</li>
+<li>Export CSV for external analysis or reconciliation.</li>
+</ul>
+<hr />
+<h1>3. Admin</h1>
+<h2>Operate the back office</h2>
+<p><img alt="Operate the back office" src="img/platform-demo/12-admin-console.png" /></p>
+<ul>
+<li>Admin sees platform KPIs, queues, exceptions, and operational navigation in one workspace.</li>
+<li>Navigation groups are collapsible and can be minimized to keep a complex toolset manageable.</li>
+<li>Global settings include the USD, GBP, EUR, or UZS display-currency override.</li>
+</ul>
+<h2>Coordinate the Agent Fleet</h2>
+<p><img alt="Coordinate the Agent Fleet" src="img/platform-demo/13-admin-agent-fleet.png" /></p>
+<ul>
+<li>Fourteen specialists span orchestration, origination, decisioning, servicing, oversight, and growth.</li>
+<li>Agents use grounded tools and preserve approval gates for credit, communication, publishing, spend, and money movement.</li>
+<li>The activity feed makes agent operations auditable.</li>
+</ul>
+<h2>Run marketing and SEO agents</h2>
+<p><img alt="Run marketing and SEO agents" src="img/platform-demo/14-admin-seo-agent.png" /></p>
+<ul>
+<li>Browser-driven eval question shown: “Build a supplier invoice-finance keyword cluster.”</li>
+<li>SEO &amp; AI Search and Paid Marketing agents create research and drafts without silently publishing or activating spend.</li>
+<li>Campaign work should include audience, intent, evidence, measurement, guardrails, and explicit approval.</li>
+</ul>
+<h2>Inspect and edit agent skills</h2>
+<p><img alt="Inspect and edit agent skills" src="img/platform-demo/15-admin-skills-editor.png" /></p>
+<ul>
+<li>Open Agent Skills to view each specialist’s current Markdown instructions.</li>
+<li>Admin can save a database-backed prompt version and review change history.</li>
+<li>Revert restores a selected earlier version while preserving an audit trail.</li>
+</ul>
+<h2>Process and approve invoices</h2>
+<p><img alt="Process and approve invoices" src="img/platform-demo/16-admin-processing.png" /></p>
+<ul>
+<li>The processing queue supports verification, exceptions, risk review, and funding readiness.</li>
+<li>AI may recommend or draft; final financial and credit actions remain approval-gated.</li>
+<li>Synthetic data makes the workflow safe to explore in the platform demo.</li>
+</ul>
+<h2>Reconcile accounting activity</h2>
+<p><img alt="Reconcile accounting activity" src="img/platform-demo/17-admin-accounting.png" /></p>
+<ul>
+<li>Accounting tools cover journal review, reconciliation, receivables, fees, reserves, and settlement evidence.</li>
+<li>Agents must not create balancing plugs or invent transactions.</li>
+<li>Use source records and approval history to resolve differences.</li>
+</ul>
+<h2>Manage platform integrations</h2>
+<p><img alt="Manage platform integrations" src="img/platform-demo/18-admin-integrations.png" /></p>
+<ul>
+<li>Integration cards show demo connectivity for accounting, banking, communications, and document services.</li>
+<li>Connection status is demonstrative and must not be treated as a live third-party authorization.</li>
+<li>The invoice ingestion endpoint supports structured external demo data.</li>
+</ul>
+<h2>Review the audit trail</h2>
+<p><img alt="Review the audit trail" src="img/platform-demo/19-admin-audit.png" /></p>
+<ul>
+<li>Audit records identify actor, action, entity, detail, and time.</li>
+<li>Use the log to inspect human and agent activity, approvals, and configuration changes.</li>
+<li>Prompt-version history and action logs support governance of the agentic platform.</li>
+</ul>
+<hr />
+<h1>Suggested demo script</h1>
+<ol>
+<li>Sign in as <strong>Supplier</strong>, upload a sample invoice, inspect the offer, and open My Profile.</li>
+<li>Switch to <strong>Investor</strong>, ask the two evaluation questions shown above, then compare Portfolio and Auto-invest.</li>
+<li>Switch to <strong>Admin</strong>, open Agent Fleet, run a specialist prompt, inspect Agent Skills, then review Processing, Accounting, Integrations, and Audit.</li>
+</ol>
+<p>The demo credentials and one-click roles are available from the Sign in page. Use only synthetic information.</p></body></html>

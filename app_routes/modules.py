@@ -325,10 +325,54 @@ def mail(req):
         Section_(Eyebrow("Workspace · Mail"),
                  Heading(1, "Inbox", cls="mt-4"),
                  P(f"{unread} unread · client, debtor and bureau correspondence — threads, labels and AI draft replies.",
-                   cls="mt-3 text-ink-muted max-w-3xl"), cls="border-t border-line"),
+                   cls="mt-3 text-ink-muted max-w-3xl"),
+                 A("Borrower email templates →", href="/app/mail/templates",
+                   cls="inline-block mt-4 text-sm text-accent"),
+                 cls="border-t border-line"),
         Section_(Div(*rows, cls="rounded-2xl bg-bg-elevated border border-line overflow-hidden"),
                  cls="border-t border-line"),
         current_path="/app/mail", lang=lang, role=current_role(req), subrole=current_subrole(req),
+    )
+
+
+@rt("/app/mail/templates")
+def mail_templates(req):
+    if current_role(req) != "admin":
+        return RedirectResponse("/app", status_code=303)
+    import markdown
+    from utils.email_templates import TEMPLATE_NAMES, render_email_template
+
+    cards = []
+    names = {
+        "bank_connection": "Connect your bank account",
+        "accounting_connection": "Connect your accounting system",
+    }
+    for kind in TEMPLATE_NAMES:
+        rendered = render_email_template(
+            kind, first_name="Julian", resume_url="https://factorio.co.uk/app"
+        )
+        body = markdown.markdown(rendered["body"], extensions=["sane_lists"])
+        cards.append(Div(
+            Div(Span("DRAFT ONLY", cls="text-[10px] font-mono text-amber-700"),
+                Span("Postmark not configured", cls="text-[10px] text-ink-dim"),
+                cls="flex justify-between"),
+            H3(names[kind], cls="text-lg font-semibold mt-3"),
+            P("Subject: " + rendered["subject"], cls="text-sm font-medium mt-2"),
+            P(rendered["preheader"], cls="text-xs text-ink-muted mt-1"),
+            Div(NotStr(body), cls="prose prose-sm max-w-none mt-5 p-5 rounded-xl bg-white border border-line"),
+            cls="p-6 rounded-2xl bg-bg-elevated border border-line"))
+    return app_page(
+        "Borrower email templates",
+        Section_(Eyebrow("Workspace · Transactional email"),
+                 Heading(1, "Borrower connection reminders", cls="mt-4"),
+                 P("Factorio-branded templates for paused bank connections and optional "
+                   "accounting-system connections. Customer Service can render drafts; "
+                   "delivery stays disabled until Postmark and approval controls are configured.",
+                   cls="mt-3 text-ink-muted max-w-3xl"),
+                 cls="border-t border-line"),
+        Section_(Div(*cards, cls="grid xl:grid-cols-2 gap-6"), cls="border-t border-line"),
+        current_path="/app/mail", lang=get_lang(req), role="admin",
+        subrole=current_subrole(req),
     )
 
 

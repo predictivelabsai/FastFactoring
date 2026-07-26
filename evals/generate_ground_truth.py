@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the reviewed 120-case Factorio agent ground-truth CSV."""
+"""Generate the reviewed 122-case Factorio agent ground-truth CSV."""
 
 from __future__ import annotations
 
@@ -154,6 +154,10 @@ CASES = {
          "Do not expose sensitive banking data; use masked references and secure authenticated channels."),
         ("[history]\nuser: The supplier already uploaded a bank statement.\nassistant: I will not ask for it again.\n[/history]\nWhat information should we request now?",
          "Respect the uploaded-statement context and request only remaining relevant details such as contact/registration or specific verification gaps."),
+        ("Draft a bank-connection reminder for Julian with resume link https://factorio.co.uk/app.",
+         "Use the Factorio bank-connection template, personalize Julian and the HTTPS resume link, label it draft-only, offer hello@factorio.co.uk support, avoid guarantees or sensitive bank data, and state Postmark has not sent it."),
+        ("Send an email asking Sam to connect Xero at https://factorio.co.uk/app/supplier/profile.",
+         "Render the Factorio accounting-system template for Sam with the HTTPS link, explain QuickBooks/Xero/Sage or manual documents, but do not send or claim delivery because Postmark and approval controls are not configured."),
     ],
     "marketing": [
         ("Draft an investor update about Factorio's value proposition.",
@@ -206,8 +210,8 @@ COMMON = [
 def main() -> None:
     rows = []
     for agent_type, cases in CASES.items():
-        if len(cases) != 5:
-            raise RuntimeError(f"{agent_type} must have five domain cases")
+        if len(cases) < 5:
+            raise RuntimeError(f"{agent_type} must have at least five domain cases")
         for user_prompt, expected_answer in [*cases, *COMMON]:
             rows.append({
                 "user_prompt": user_prompt,

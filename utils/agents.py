@@ -81,7 +81,8 @@ AGENTS = [
      ["sales_pipeline", "advance_deal", "draft_message"], "Advance the Vertex Construction deal."),
     ("service", "Customer Service", "Growth", "\U0001F4AC", "autonomous",
      "Triages inbound queries and drafts replies.",
-     ["kpis", "draft_message"], "Draft a reply to a supplier asking when they'll be funded."),
+     ["kpis", "draft_message", "draft_transactional_email"],
+     "Draft a bank-connection reminder for Julian using https://factorio.co.uk/app."),
     ("marketing", "Investor Marketing", "Growth", "\U0001F4E3", "autonomous",
      "Investor acquisition & retention campaigns.",
      ["kpis", "sector_exposure", "draft_message"], "Draft an investor update highlighting returns."),
@@ -168,6 +169,24 @@ def _write_tools(slug: str):
                 f"(Draft prepared by the {slug} agent; a human sends it.)\n{key_points}")
 
     @tool
+    def draft_transactional_email(template: str, first_name: str,
+                                  resume_url: str) -> str:
+        """Render a borrower reminder. Template: bank_connection or accounting_connection. Does not send."""
+        from utils.email_templates import render_email_template
+        try:
+            rendered = render_email_template(
+                template, first_name=first_name, resume_url=resume_url
+            )
+        except ValueError as exc:
+            return f"Could not render email: {exc}"
+        _log(slug, "transactional_email.draft", template, rendered["subject"])
+        return (
+            f"STATUS: DRAFT ONLY — Postmark is not configured.\n"
+            f"SUBJECT: {rendered['subject']}\n"
+            f"PREHEADER: {rendered['preheader']}\n\n{rendered['body']}"
+        )
+
+    @tool
     def seo_site_audit(url: str = "https://factorio.co.uk") -> str:
         """Read a public Factorio page and report basic technical/on-page SEO evidence."""
         import re
@@ -211,6 +230,7 @@ def _write_tools(slug: str):
 
     catalog = {"advance_deal": advance_deal, "log_dunning": log_dunning,
                "set_facility_limit": set_facility_limit, "draft_message": draft_message,
+               "draft_transactional_email": draft_transactional_email,
                "seo_site_audit": seo_site_audit, "paid_campaign_plan": paid_campaign_plan}
     return catalog
 
@@ -223,7 +243,10 @@ def _tools_for(slug: str, tool_keys, *, eval_mode: bool = False):
                   "top_debtors": "top_debtors", "risk_distribution": "risk_distribution",
                   "sales_pipeline": "sales_pipeline", "credit_scores": "credit_scores"}
     writes = _write_tools(slug)
-    safe_eval_writes = {"seo_site_audit", "paid_campaign_plan"}
+    safe_eval_writes = {
+        "seo_site_audit", "paid_campaign_plan", "draft_message",
+        "draft_transactional_email",
+    }
     if tool_keys == ["*"]:
         selected = list(read.values()) + list(writes.values())
         return ([tool for tool in selected

@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-26 — Borrower transactional email skills
+
+- Added Factorio-branded Markdown templates under `email/templates/` for paused bank connections and optional QuickBooks, Xero, or Sage connections.
+- Added a Customer Service agent skill that renders personalized, HTTPS-linked drafts from the checked-in templates without claiming delivery.
+- Added an Admin preview at `/app/mail/templates`. Postmark sending remains disabled until a server token, verified sender, lifecycle approval controls, and delivery webhooks are configured.
+
 ## 2026-07-26 — Investor AI
 
 - Specialized the Investor default chat as **Investor AI**, with portfolio-focused onboarding and suggested questions about performance, concentration, upcoming payments, and risk.

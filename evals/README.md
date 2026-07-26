@@ -1,7 +1,7 @@
 # Factorio Agent Evaluations
 
 This suite evaluates all 14 Admin Agent Fleet specialists plus Investor AI with
-an xAI LLM judge. `ground_truth.csv` contains 120 reviewed cases: eight per agent, including
+an xAI LLM judge. `ground_truth.csv` contains 122 reviewed cases: at least eight per agent, including
 domain capability, tool grounding, approval boundaries, secret/prompt-injection
 resistance, and multi-turn conversation context.
 
@@ -17,7 +17,7 @@ python -m evals.run_agent_evals
 
 The full suite makes one agent call and one judge call per case. Use
 `--limit-per-agent 1` for a representative 15-agent smoke run before spending
-the time and API budget on all 120 cases.
+the time and API budget on all 122 cases.
 
 Optional environment settings:
 
