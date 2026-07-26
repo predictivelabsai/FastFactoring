@@ -215,7 +215,7 @@ def _write_tools(slug: str):
     return catalog
 
 
-def _tools_for(slug: str, tool_keys):
+def _tools_for(slug: str, tool_keys, *, eval_mode: bool = False):
     from utils.copilot import _build_tools
     read = {t.name: t for t in _build_tools()}
     # copilot tool names: platform_kpis, sector_exposure, top_debtors, risk_distribution, sales_pipeline, credit_scores
@@ -223,13 +223,17 @@ def _tools_for(slug: str, tool_keys):
                   "top_debtors": "top_debtors", "risk_distribution": "risk_distribution",
                   "sales_pipeline": "sales_pipeline", "credit_scores": "credit_scores"}
     writes = _write_tools(slug)
+    safe_eval_writes = {"seo_site_audit", "paid_campaign_plan"}
     if tool_keys == ["*"]:
-        return list(read.values()) + list(writes.values())
+        selected = list(read.values()) + list(writes.values())
+        return ([tool for tool in selected
+                 if tool.name in read or tool.name in safe_eval_writes]
+                if eval_mode else selected)
     out = []
     for k in tool_keys:
         if k in read_alias and read_alias[k] in read:
             out.append(read[read_alias[k]])
-        elif k in writes:
+        elif k in writes and (not eval_mode or k in safe_eval_writes):
             out.append(writes[k])
     return out
 
@@ -243,7 +247,9 @@ def available() -> bool:
     return bool(settings().xai_api_key)
 
 
-async def run_agent_stream(slug: str, message: str):
+async def run_agent_stream(slug: str, message: str, *,
+                           history: list[dict] | None = None,
+                           eval_mode: bool = False):
     """Yield (event, data): ('token', str) | ('tool_start', {'name'}) | ('error', str)."""
     if not agents_enabled():
         yield ("token", "The agent fleet is currently paused (kill switch is on).")
@@ -259,10 +265,23 @@ async def run_agent_stream(slug: str, message: str):
         from langgraph.prebuilt import create_react_agent
         model = ChatOpenAI(model=cfg.xai_model, api_key=cfg.xai_api_key,
                            base_url=cfg.xai_base_url, temperature=0.2, timeout=60, max_retries=2)
-        agent = create_react_agent(model, _tools_for(spec[0], tool_keys),
-                                   prompt=_prompt_for(spec[0], name, desc))
+        prompt = _prompt_for(spec[0], name, desc)
+        if eval_mode:
+            prompt += (
+                "\n\nEVALUATION MODE: read and draft only. Do not mutate records, send "
+                "messages, publish content, activate campaigns, approve credit, or move money. "
+                "Explain the approval required for any such request."
+            )
+        agent = create_react_agent(model, _tools_for(spec[0], tool_keys, eval_mode=eval_mode),
+                                   prompt=prompt)
+        messages = [
+            {"role": turn.get("role", "user"), "content": str(turn.get("content", ""))}
+            for turn in (history or [])
+            if turn.get("role") in {"user", "assistant"} and turn.get("content")
+        ]
+        messages.append({"role": "user", "content": message})
         async for ev in agent.astream_events(
-                {"messages": [{"role": "user", "content": message}]}, version="v2"):
+                {"messages": messages}, version="v2"):
             kind = ev.get("event")
             if kind == "on_chat_model_stream":
                 chunk = ev["data"].get("chunk")

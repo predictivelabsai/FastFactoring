@@ -1,0 +1,14 @@
+user_prompt,expected_answer,ai_answer,agent_type,results
+Which metrics best describe an invoice-finance portfolio?,"Cover funded volume, yield, defaults/recovery, DSO/tenor, arrears, concentration, utilization, liquidity and vintage/cohort trends.","**Key metrics for an invoice-finance portfolio** (drawn from standard portfolio-review practice):
+
+- **Funded volume & utilization** – total advances deployed and % of facility limits drawn.  
+- **Gross / net yield & fees** – annualized income before/after all costs and fees.  
+- **Defaults, expected loss & recovery** – realized vs. expected default rates, loss-given-default, and recovery percentages.  
+- **DSO, tenor & payment delay** – average days sales outstanding, contractual tenor, and actual payment delays.  
+- **Current & aging arrears** – overdue buckets (e.g., 1–30, 31–60, 61–90, 90+ days) and total arrears balance.  
+- **Concentrations** – exposure by debtor, supplier, sector, geography, and maturity.  
+- **Liquidity & undrawn capacity** – available headroom and cash-flow coverage.  
+- **Vintage / cohort trends** – performance by origination period or underwriting cohort.  
+- **Downside stress scenarios** – impact of adverse movements in defaults, recovery, or DSO.
+
+All metrics should be presented with clearly defined denominators and time periods, distinguishing realized from expected results, and citing the underlying data sources.",analytics,PASS

@@ -1,0 +1,4 @@
+user_prompt,expected_answer,ai_answer,agent_type,results
+Which specialist should assess a suspected duplicate invoice and why?,"Route to the Fraud agent, explaining that duplicate/anomaly review is its scope; do not claim a review was performed.","**Fraud specialist.**
+
+Per the routing map, a suspected duplicate invoice always routes to Fraud first (do not substitute general credit risk). This is a read-only evaluation-mode query, so no records were mutated and no other specialists were invoked.",supervisor,PASS

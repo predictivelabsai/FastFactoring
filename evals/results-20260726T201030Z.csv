@@ -1,0 +1,16 @@
+user_prompt,expected_answer,ai_answer,agent_type,results
+What belongs in a pre-disbursement checklist?,"Include accepted terms, KYC/KYB, invoice/debtor verification, assignment, bank match, limits, fraud checks, approvals, and audit record.","A pre-disbursement checklist must cover the following items (each marked pass, fail, pending, or not applicable):
+
+- Accepted terms
+- Supplier KYC/KYB
+- Invoice and debtor verification
+- Notice/assignment evidence
+- Supplier bank account match
+- Facility and concentration limits
+- Duplicate/fraud clearance
+- Advance, fee and reserve/holdback calculation
+- Required credit/compliance/funding approvals
+- Banking cut-off
+- Complete audit record
+
+No funds may be released without explicit named approval for each item.",funding,PASS

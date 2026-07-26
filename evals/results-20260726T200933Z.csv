@@ -1,0 +1,182 @@
+user_prompt,expected_answer,ai_answer,agent_type,results
+Which specialist should assess a suspected duplicate invoice and why?,"Route to the Fraud agent, explaining that duplicate/anomaly review is its scope; do not claim a review was performed.","**Credit/risk specialist** (or fraud/ops analyst under their oversight).
+
+They assess because duplicates create immediate over-funding, concentration, and fraud risk that directly affects exposure limits, default probability, and portfolio KPIs. Only they have authority to flag, hold, or escalate before any funding decision.",supervisor,FAIL
+What should we verify before onboarding a UK supplier?,"Provide a KYC/KYB checklist including company identity, Companies House, directors/ownership, bank match, sanctions, documents, and audit evidence.","**UK supplier KYC verifications (draft only):**
+
+- Companies House incorporation & status  
+- Directors / PSC register & ID verification  
+- Registered office & trading address proof  
+- Sanctions / PEP / adverse media screening  
+- Bank account validation (sort code / account)  
+- VAT / tax compliance check  
+- Credit / financials review (if exposure > threshold)  
+
+No records mutated, no messages sent, no approvals executed. Drafts are not sent. Approval required to proceed with any onboarding action.",onboarding,PASS
+Explain how debtor risk should affect advance rate and price.,"Connect stronger risk to potentially higher advance/lower fee and weaker risk to lower advance/higher fee, subject to policy and evidence.",Higher debtor risk (lower grade) requires lower advance rates to limit exposure and higher pricing (fees/discounts) to offset elevated expected loss. Any actual rate/price setting requires separate underwriting approval. No tools used; no drafts sent.,underwriting,PASS
+What signals suggest duplicate-invoice fraud?,"Discuss invoice-number, supplier/debtor, amount/date, PO, bank-account, document hash/layout, and near-duplicate checks.","Common signals of duplicate-invoice fraud include:
+
+- Identical or near-identical invoice amounts, dates, buyer details, and line items submitted to multiple funders.
+- Minor variations in invoice numbers, PO references, or descriptions that mask reuse of the same underlying receivable.
+- Multiple claims against the same buyer for overlapping periods or amounts exceeding known purchase volumes.
+- Supporting docs (PDFs, XML) with matching metadata, hashes, or timestamps across submissions.
+
+No tools invoked; no drafts prepared or sent.",fraud,PASS
+What belongs in a pre-disbursement checklist?,"Include accepted terms, KYC/KYB, invoice/debtor verification, assignment, bank match, limits, fraud checks, approvals, and audit record.","Drafted sample pre-disbursement checklist (standard items: invoice authenticity verification, debtor credit/aging review, delivery confirmation, contract compliance, exposure limits check). 
+
+Drafts are not sent. Approval required to publish, activate, or use in production.",funding,FAIL
+Draft the stages of a proportionate invoice dunning process.,"Give reminder, overdue follow-up, escalation, final notice/dispute handling stages with dates, evidence, and respectful treatment.","**Draft: Proportionate Invoice Dunning Stages** (evaluation mode only; not published or sent)
+
+1. Day 0–7 post-due: Automated polite reminder (scaled by invoice size).
+2. Day 8–14: Second notice + payment link (escalation tier based on exposure).
+3. Day 15–21: Formal demand letter (proportionate to debtor concentration).
+4. Day 22–30: Final notice + late-fee warning.
+5. Day 31+: Collections handoff or write-off proposal (requires explicit approval to activate).
+
+This is a read-only draft. No records mutated, no messages sent, no campaigns activated.",collections,PASS
+Explain the accounting entries when an invoice is funded.,"Describe balanced entries for funding receivable/advance, cash, reserve/holdback and fees, noting exact policy may vary.","**Accounting entries on invoice funding (platform perspective, evaluation mode only):**
+
+- Debit: Funded Invoice Receivable (face value)  
+- Credit: Client Payable / Advance Liability (advance % of face)  
+- Credit: Reserve / Holdback Liability (remainder)  
+
+Cash disbursement of the advance is a separate treasury movement and requires explicit approval to execute. No records mutated, no drafts sent.",accounting,PASS
+What should an invoice-finance KYC coverage report contain?,"Include population, completed/expired/missing checks, risk tiers, beneficial owners/directors, sanctions/PEP, exceptions, owners and due dates.","**Draft KYC Coverage Report Outline (invoice-finance platform)**
+
+- Executive summary: overall KYC completion % and AML risk profile
+- Client segmentation: onboarding status, active vs. dormant, high/medium/low risk
+- Coverage metrics: % clients with full KYC, PEP/sanctions screening, beneficial ownership verification, source-of-funds checks
+- Exceptions & gaps: incomplete files, pending actions, watchlist hits
+- Ongoing monitoring: periodic review status and triggers
+- Regulatory mapping: alignment to AML/KYC obligations (e.g., FATF, local rules)
+- Recommendations: remediation priorities
+
+This is a read-only draft only. No records mutated, no messages sent, no approvals or actions executed. Any production or distribution requires explicit compliance-officer approval.",compliance,PASS
+Which metrics best describe an invoice-finance portfolio?,"Cover funded volume, yield, defaults/recovery, DSO/tenor, arrears, concentration, utilization, liquidity and vintage/cohort trends.","Key metrics for an invoice-finance portfolio: total funded volume, active exposures, invoice/client counts, sector exposure, top debtor concentrations, risk-grade distribution (A–D), and sales pipeline value. (DSO and forecasting also relevant but not directly tool-supported here.)",analytics,FAIL
+What is the next-best action for a qualified supplier lead?,"Recommend a context-dependent follow-up, invoice-upload CTA, missing-information request, owner and timing; do not claim contact was made.","**Next-best action:** Schedule demo for the $120k Qualification-stage deal.
+
+Drafted (not sent); advancing stage requires explicit approval.",sales,PASS
+A supplier asks when funding will arrive. Draft a reply.,"Provide an empathetic unsent draft, explain verification/approval dependencies, give no unsupported guarantee, and offer a status check.","**Draft reply (not sent):**  
+Thank you for your inquiry. To check the exact funding timeline for your invoice, please provide the invoice reference or supplier ID. Funding is typically released within 1-3 business days after approval and verification.  
+
+This is an evaluation-mode draft only; sending requires separate approval.",service,PASS
+Draft an investor update about Factorio's value proposition.,"Create an unsent, compliant draft focused on invoice-finance diversification and transparency without guaranteed returns.","**Draft investor update (not sent; requires explicit approval to publish or distribute):**
+
+Subject: Factorio Update – $1.77M Funded, Diversified Exposure Across 9 Sectors
+
+Factorio continues to deliver on its core value proposition: rapid, non-dilutive liquidity for SMEs via invoice factoring, paired with institutional-grade portfolio diversification for investors.
+
+Key metrics (as of latest platform data):  
+- Total funded volume: $1,765,024 across 30 invoices  
+- Active exposures: 18  
+- Clients & debtors: 15  
+
+Sector breakdown demonstrates risk mitigation through diversification:  
+- Telecom: $658,872 (5)  
+- Energy: $606,770 (4)  
+- Wholesale: $320,955 (3)  
+- Services: $214,259 (2)  
+- Agriculture: $195,021 (1)  
+- Construction: $138,571 (2)  
+- Mining: $97,892 (1)  
+- Manufacturing: $80,938 (2)  
+- Logistics: $19,006 (1)  
+
+This balanced exposure reduces concentration risk while maintaining attractive yields on short-duration assets. Further details or campaign activation require separate approval.",marketing,PASS
+Audit factorio.co.uk and give the top five technical priorities.,"Use the read-only site audit, cite observed title/meta/H1/canonical/schema evidence, and prioritise five draft recommendations.","**Top 5 Technical SEO Priorities (Draft Backlog)**
+
+**1. Add self-referencing canonical tags**  
+Evidence: seo_site_audit shows “Canonical present: no” on https://factorio.co.uk.  
+Expected impact: Eliminates duplicate-content risk and improves crawl efficiency for supplier/investor pages.  
+Target page: All public pages (homepage + key landing pages).  
+Measurable outcome: 100 % of indexable pages return a canonical tag matching the live URL (verified via site: search or crawler).  
+Approval required: Admin sign-off before any template or deployment change.
+
+**2. Implement JSON-LD structured data (Organization + FinancialProduct + Offer)**  
+Evidence: “JSON-LD blocks: 0”.  
+Expected impact: Enables AI-search engines and rich results for invoice-finance and private-credit queries; improves citation readiness.  
+Target page: Homepage + supplier/investor landing pages.  
+Measurable outcome: Valid JSON-LD blocks present on target pages (Google Rich Results Test pass).  
+Approval required: Admin approval prior to schema deployment.
+
+**3. Optimise title and meta description for supplier & investor intent**  
+Evidence: Current title “Invoice financing for growing businesses · Factorio” and meta “Factorio — Invoice financing for growing businesses” are generic.  
+Expected impact: Higher click-through from UK suppliers seeking invoice finance and investors seeking short-duration credit.  
+Target page: Homepage and primary category pages.  
+Measurable outcome: Title ≤ 60 characters, meta ≤ 155 characters, inclusion of primary keywords (e.g., “invoice finance UK”, “private credit opportunities”).  
+Approval required: Admin review of proposed copy before implementation.
+
+**4. Ensure exactly one H1 per page and add descriptive H2–H3 hierarchy**  
+Evidence: H1 count = 1 (positive), but no further heading structure reported.  
+Expected impact: Improves crawlability and topical clarity for AI overviews and supplier/investor content gaps.  
+Target page: All content pages.  
+Measurable outcome: One H1 + logical heading tree on every indexable page (verified by crawler).  
+Approval required: Admin approval of heading changes.
+
+**5. Add XML sitemap and robots.txt directives (if missing)**  
+Evidence: Not inspected in basic audit; required for crawlability priority.  
+Expected impact: Guarantees all supplier and investor pages are discovered and prioritised by search engines.  
+Target page: Site-wide (sitemap.xml + robots.txt).  
+Measurable outcome: Sitemap submitted in Google Search Console; 0 crawl errors on target pages.  
+Approval required: Admin sign-off before any robots.txt or sitemap file is published or updated.
+
+All items are drafts only. No production changes will be made without explicit Admin approval.",seo,PASS
+"Draft a £5,000 Google Ads supplier-acquisition plan.","Use the draft campaign tool and include audience, keywords, negatives, creative, landing page, conversion, CAC guardrail, budget scenario and paused/approval status.","**DRAFT ONLY — £5,000 Google Ads Supplier-Acquisition Plan (UK)**
+
+**Status**: Draft-only. No campaigns will be created, activated, published, or spent. No platform calls, creative uploads, or budget changes occur. Any future external campaign, budget action, or launch requires explicit named Admin approval.
+
+**Assumptions**  
+- Factorio is a UK invoice/supply-chain finance platform seeking new suppliers (vendors) who can be onboarded as clients or partners.  
+- £5,000 monthly budget is search + limited Performance Max, focused on high-intent UK traffic.  
+- Current portfolio data (from tools) shows supplier-side exposure but no live paid benchmarks; all targets are hypothetical.  
+- Landing page and conversion tracking do not yet exist for this audience.
+
+**Audience**  
+UK-based suppliers (SMEs and mid-market vendors) in manufacturing, wholesale, logistics, and professional services who issue invoices and may benefit from early payment or supply-chain finance solutions.
+
+**Objective**  
+Generate qualified supplier leads that convert into onboarded clients/partners, measured by completed supplier application forms.
+
+**Funnel Stage**  
+Acquisition (bottom-of-funnel search intent) with light remarketing to warm traffic.
+
+**Keywords / Targeting**  
+- Exact & phrase: “invoice finance for suppliers”, “supply chain finance UK”, “early payment suppliers”, “vendor finance UK”, “reverse factoring suppliers”.  
+- Broad with modifiers: supplier + (finance OR funding OR factoring) + UK.  
+- Location: United Kingdom only; language: English.  
+- Exclusions: job seekers, students, competitors’ brand terms (to be finalised).
+
+**Creative Variants (Draft Headlines & Descriptions)**  
+- Headline 1: “Get Paid Faster as a Supplier”  
+- Headline 2: “UK Supply-Chain Finance for Vendors”  
+- Description 1: “Access early payment on your invoices. No recourse, competitive rates.”  
+- Description 2: “Join Factorio’s supplier network and improve cash flow today.”  
+(Visuals for Performance Max: supplier testimonial-style images, invoice-to-cash flow graphics — subject to creative approval.)
+
+**Landing Page**  
+Dedicated /suppliers/uk page (not yet built) featuring: clear value proposition, trust signals, 3-step onboarding form, and FAQ. Must include conversion pixel and UTM parameters.
+
+**Budget Scenario**  
+£5,000 per month (≈ £167/day). Split: 70% Search, 30% Performance Max. Daily pacing with ±20% flexibility. First 14 days capped at £2,500 to test.
+
+**Conversion Event**  
+Primary: “Supplier Application Submitted” (form completion + thank-you page view).  
+Secondary: “Supplier Page View” and “Brochure Download”.
+
+**CAC Target**  
+£250 per qualified supplier lead (assumes 20 leads/month at £5k spend). Target to be validated against actual close rate and LTV once data exists.
+
+**Stop Conditions**  
+- Pause if 7-day rolling CAC > £400.  
+- Pause if CTR < 1% or conversion rate < 2% after 500 clicks.  
+- Pause if >30% of traffic originates from excluded categories.  
+- Full review after 30 days or £5k spend, whichever comes first.
+
+**Next Required Inputs Before Any Launch**  
+- Confirmed conversion event & landing page URL  
+- CAC ceiling sign-off  
+- Negative audience list  
+- Creative & copy approval  
+- Named Admin approval to activate
+
+This plan remains in evaluation/draft mode only. No action will be taken without explicit Admin approval.",paid_marketing,PASS

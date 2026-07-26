@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-26 — Full Agent Fleet evaluation suite
+
+- Added 112 reviewed evaluation conversations: eight for each of 14 agents, covering domain quality, grounding, approvals, prompt injection, secrets, and multi-turn context.
+- Added an evaluation-safe fleet mode that disables mutating tools while preserving read and safe draft tools.
+- Added an xAI LLM judge for every case and exact result columns: `user_prompt`, `expected_answer`, `ai_answer`, `agent_type`, `results`.
+
 ## 2026-07-26 — Marketing agents, skills editor, and grouped navigation
 
 - Added dedicated **SEO & AI Search** and **Paid Marketing** specialists to the existing Admin Agent Fleet with read/draft-only tools and editable prompt files.
