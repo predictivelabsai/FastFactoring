@@ -115,7 +115,11 @@ def agents_console(req):
                     cls="flex items-center justify-between mb-1"),
                 H3(name, cls="text-ink text-sm font-semibold"),
                 P(desc, cls="text-ink-muted text-xs mt-0.5"),
-                Span(auto, cls="ag-auto mt-2 inline-block"),
+                Div(Span(auto, cls="ag-auto"),
+                    A("Edit skills", href=f"/app/admin/agents/skills/{slug}",
+                      onclick="event.stopPropagation()",
+                      cls="text-[11px] text-accent hover:underline"),
+                    cls="flex items-center justify-between mt-2"),
                 cls="ag-card", onclick=f"agPick('{slug}','{name}','{ex_js}')"))
         if cards:
             pods.append(Div(P(pod, cls="text-[11px] font-mono tracking-widest uppercase text-ink-dim mb-2 mt-4"),
@@ -166,6 +170,152 @@ def agents_console(req):
             NotStr(f"<script>{_JS}</script>"),
             cls="border-t border-line"),
         current_path="/app/admin/agents", lang=lang, role="admin", subrole=current_subrole(req))
+
+
+def _prompt_versions(slug: str, limit: int = 12):
+    if not _HAS_DB:
+        return []
+    try:
+        return fetch_all(
+            """SELECT id, changed_by, created_at, left(content, 180) preview
+               FROM factorio.agent_prompt_versions
+               WHERE agent_slug=%s ORDER BY id DESC LIMIT %s""",
+            (slug, limit),
+        )
+    except Exception:
+        return []
+
+
+@rt("/app/admin/agents/skills")
+def agent_skills_home(req):
+    g = _guard(req)
+    if g:
+        return g
+    cards = []
+    for slug, name, pod, icon, autonomy, desc, tool_keys, _example in fleet.AGENTS:
+        versions = _prompt_versions(slug, 1)
+        cards.append(A(
+            Div(Span(NotStr(icon), cls="text-xl"),
+                Div(H3(name, cls="text-sm font-semibold"),
+                    P(desc, cls="text-xs text-ink-muted mt-1"),
+                    P(f"{pod} · {autonomy} · {len(tool_keys)} tool scope(s)",
+                      cls="text-[10px] text-ink-dim mt-2"),
+                    cls="flex-1"),
+                Span("Edited" if versions else "Default",
+                     cls="text-[10px] rounded-full px-2 py-1 bg-bg-raised text-ink-muted"),
+                cls="flex gap-4 items-start"),
+            href=f"/app/admin/agents/skills/{slug}",
+            cls="block p-5 rounded-2xl bg-bg-elevated border border-line hover:border-accent"))
+    return app_page(
+        "Agent skills",
+        Section_(Eyebrow("Automation · Governance"),
+                 Heading(1, "Agent skills editor", cls="mt-4"),
+                 P("View or edit the live instructions used by every fleet specialist. "
+                   "Database-backed versions survive deployments and can be reverted.",
+                   cls="mt-3 text-ink-muted max-w-3xl"),
+                 cls="border-t border-line"),
+        Section_(Div(*cards, cls="grid md:grid-cols-2 gap-4"), cls="border-t border-line"),
+        current_path="/app/admin/agents/skills", lang=get_lang(req),
+        role="admin", subrole=current_subrole(req))
+
+
+@rt("/app/admin/agents/skills/{slug}", methods=["GET", "POST"])
+async def agent_skill_edit(req, slug: str):
+    g = _guard(req)
+    if g:
+        return g
+    spec = fleet.agent_by_slug(slug)
+    if not spec:
+        return RedirectResponse("/app/admin/agents/skills", status_code=303)
+    _slug, name, pod, _icon, autonomy, desc, tool_keys, _example = spec
+    message = ""
+    if req.method == "POST":
+        form = await req.form()
+        content = str(form.get("content") or "").strip()
+        if len(content) < 40:
+            message = "Instructions must be at least 40 characters."
+        elif len(content) > 50_000:
+            message = "Instructions must be 50,000 characters or fewer."
+        else:
+            from db import execute
+            actor = str((getattr(req, "session", {}) or {}).get("uid") or "admin")
+            execute(
+                """INSERT INTO factorio.agent_prompt_versions
+                   (agent_slug, content, changed_by) VALUES (%s, %s, %s)""",
+                (slug, content, actor),
+            )
+            from app_routes.admin import log_action
+            log_action("admin", actor, "agent.prompt.update", slug, f"{len(content)} characters")
+            message = "Saved. New agent runs will use these instructions."
+    from utils.prompts import load_agent_prompt
+    content = load_agent_prompt(slug, name, desc)
+    versions = _prompt_versions(slug)
+    history = [
+        Div(
+            Div(Span(f"Version #{v['id']}", cls="font-mono text-xs text-accent"),
+                Span(str(v["created_at"]).split(".")[0], cls="text-[10px] text-ink-dim"),
+                cls="flex justify-between"),
+            P(v["preview"], cls="text-xs text-ink-muted mt-2 whitespace-pre-wrap"),
+            Form(Input(type="hidden", name="version_id", value=str(v["id"])),
+                 Button("Revert to this version", type="submit",
+                        cls="mt-2 text-xs text-accent hover:underline"),
+                 method="post", action=f"/app/admin/agents/skills/{slug}/revert"),
+            cls="p-4 border border-line rounded-xl bg-bg-elevated")
+        for v in versions
+    ]
+    return app_page(
+        f"Edit {name}",
+        Section_(Eyebrow(f"{pod} · {autonomy}"),
+                 Heading(1, name, cls="mt-4"),
+                 P(desc, cls="mt-3 text-ink-muted max-w-3xl"),
+                 P("Tools: " + ", ".join(tool_keys), cls="mt-2 text-xs font-mono text-ink-dim"),
+                 cls="border-t border-line"),
+        Section_(
+            P(message, cls="mb-4 text-green-700") if message else None,
+            Form(Textarea(content, name="content", rows="28", spellcheck="true",
+                          cls="w-full min-h-[520px] p-4 font-mono text-sm border border-line-bright "
+                              "rounded-xl bg-bg-elevated focus:outline-none focus:border-accent"),
+                 Div(Button("Save instructions", type="submit",
+                            cls="px-5 py-2.5 rounded-full bg-accent text-bg font-medium"),
+                     A("Back to all agents", href="/app/admin/agents/skills",
+                       cls="text-sm text-ink-muted"),
+                     cls="flex items-center gap-4 mt-4"),
+                 method="post", action=f"/app/admin/agents/skills/{slug}"),
+            H3("Version history", cls="text-lg font-semibold mt-10 mb-4"),
+            Div(*history, cls="grid gap-3") if history else
+            P("No edited versions yet; this agent is using its checked-in default.",
+              cls="text-sm text-ink-muted"),
+            cls="border-t border-line"),
+        current_path="/app/admin/agents/skills", lang=get_lang(req),
+        role="admin", subrole=current_subrole(req))
+
+
+@rt("/app/admin/agents/skills/{slug}/revert", methods=["POST"])
+async def agent_skill_revert(req, slug: str):
+    g = _guard(req)
+    if g:
+        return g
+    if not fleet.agent_by_slug(slug):
+        return RedirectResponse("/app/admin/agents/skills", status_code=303)
+    form = await req.form()
+    try:
+        version_id = int(form.get("version_id") or 0)
+    except (TypeError, ValueError):
+        version_id = 0
+    from db import fetch_one, execute
+    version = fetch_one(
+        """SELECT content FROM factorio.agent_prompt_versions
+           WHERE id=%s AND agent_slug=%s""", (version_id, slug))
+    if version:
+        actor = str((getattr(req, "session", {}) or {}).get("uid") or "admin")
+        execute(
+            """INSERT INTO factorio.agent_prompt_versions
+               (agent_slug, content, changed_by) VALUES (%s, %s, %s)""",
+            (slug, version["content"], f"{actor}:revert:{version_id}"),
+        )
+        from app_routes.admin import log_action
+        log_action("admin", actor, "agent.prompt.revert", slug, f"from version {version_id}")
+    return RedirectResponse(f"/app/admin/agents/skills/{slug}", status_code=303)
 
 
 @rt("/app/admin/agents/toggle")

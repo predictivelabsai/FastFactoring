@@ -26,6 +26,7 @@ from utils.copilot import copilot_available
 # ── Tool catalog: key -> (i18n_key, icon, href) ───────────────────────────
 _COPILOT = ("copilot", "nav_copilot", "✨", "/app")
 _FLEET = ("agentfleet", "nav_agent_fleet", "\U0001F9E0", "/app/admin/agents")
+_SKILLS = ("agentskills", "nav_agent_skills", "✎", "/app/admin/agents/skills")
 TOOLS = {
     "dashboard":    ("nav_dashboard",          "\U0001F4CA", "/app/dashboard"),
     "marketplace":  ("mkt_eyebrow",            "\U0001F9FE", "/app/marketplace"),
@@ -70,13 +71,44 @@ _TOOLS_BY_ROLE = {
                  "dashboard", "marketplace", "auctions", "secondary", "portfolio", "statement"],
 }
 
+_NAV_GROUPS = {
+    "investor": [
+        ("ai", "nav_group_ai", [_COPILOT]),
+        ("overview", "nav_group_overview", ["dashboard", "portfolio", "statement"]),
+        ("invest", "nav_group_invest", ["marketplace", "auctions", "secondary", "autoinvest"]),
+        ("intelligence", "nav_group_intelligence", ["triage", "reports"]),
+    ],
+    "supplier": [
+        ("ai", "nav_group_ai", [_COPILOT]),
+        ("supplier", "nav_group_supplier", ["supplier", "profile"]),
+    ],
+    "payer": [
+        ("ai", "nav_group_ai", [_COPILOT]),
+        ("payer", "nav_group_payer", ["payer"]),
+    ],
+    "admin": [
+        ("ai", "nav_group_automation", [_COPILOT, _FLEET, _SKILLS]),
+        ("overview", "nav_group_overview", ["console", "settings"]),
+        ("origination", "nav_group_origination",
+         ["onboarding", "processing", "scoring", "risk", "funding"]),
+        ("servicing", "nav_group_servicing",
+         ["collections", "accounting", "compliance", "reports_admin"]),
+        ("growth", "nav_group_growth", ["pipeline"]),
+        ("markets", "nav_group_markets",
+         ["dashboard", "marketplace", "auctions", "secondary", "portfolio", "statement"]),
+        ("workspace", "nav_group_workspace", ["drive", "docs", "mail"]),
+        ("governance", "nav_group_governance", ["integrations", "audit"]),
+    ],
+}
+
 
 def _nav_for(role: str):
-    """Return [(section_i18n_key, [(key, i18n_key, icon, href), ...]), ...] for a role."""
-    tool_keys = _TOOLS_BY_ROLE.get(role, _TOOLS_BY_ROLE["investor"])
-    tools = [(k,) + TOOLS[k] for k in tool_keys]
-    agents = [_COPILOT] + ([_FLEET] if role == "admin" else [])
-    return [("nav_sec_agents", agents), ("nav_sec_tools", tools)]
+    """Return logical, role-scoped navigation groups."""
+    groups = []
+    for group_id, label_key, entries in _NAV_GROUPS.get(role, _NAV_GROUPS["investor"]):
+        items = [(entry,) + TOOLS[entry] if isinstance(entry, str) else entry for entry in entries]
+        groups.append((group_id, label_key, items))
+    return groups
 
 
 def _active_key(role: str, current_path: str) -> str:
@@ -84,6 +116,8 @@ def _active_key(role: str, current_path: str) -> str:
         return "copilot"
     if current_path == "/app/admin/agents":
         return "agentfleet"
+    if current_path.startswith("/app/admin/agents/skills"):
+        return "agentskills"
     for k in _TOOLS_BY_ROLE.get(role, []):
         if TOOLS[k][2] == current_path:
             return k
@@ -128,8 +162,14 @@ SHELL_CSS = """
   line-height:1.3 !important; letter-spacing:-.2px !important; margin:0 !important; max-width:none !important; }
 .ws-center section:first-of-type p { font-size:12.5px !important; color:#7A867E !important;
   margin:3px 0 0 !important; max-width:none !important; line-height:1.4 !important; }
-.nav-sec { margin:2px 0 10px; }
-.nav-head { padding:8px 16px 4px; font-size:10.5px; text-transform:uppercase; letter-spacing:.9px; color:#7A867E; font-weight:700; }
+.nav-sec { margin:2px 0 7px; }
+.nav-head { width:100%; display:flex; align-items:center; justify-content:space-between; padding:8px 16px 4px;
+  border:0; background:transparent; cursor:pointer; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.9px; color:#7A867E; font-weight:700; text-align:left; }
+.nav-head:hover { color:#1F5D43; }
+.nav-arrow { font-size:13px; font-family:monospace; color:#1F5D43; }
+.nav-group-body { display:block; }
+.nav-sec.collapsed .nav-group-body { display:none; }
 .nav-item { display:flex; align-items:center; gap:9px; padding:8px 16px; font-size:13.5px; color:#415046;
   text-decoration:none; border-left:3px solid transparent; }
 .nav-item:hover { background:#EFEDE4; color:#14231B; }
@@ -253,6 +293,18 @@ function fcLoad(id){ var c=fcGet(id); var m=document.getElementById('cp-msgs'); 
   m.innerHTML=''; if(!c){ return; }
   (c.msgs||[]).forEach(function(x){ cpAdd(x.role, x.role==='assistant'?cpMd(x.content):cpEsc(x.content)); }); }
 function fcNewChat(){ fcSetActive(''); if(location.pathname==='/app'){ location.reload(); } else { location.href='/app'; } }
+function fcNavKey(id){ return 'fc_nav_'+(document.body.dataset.role||'user')+'_'+id; }
+function fcSetNavState(sec, collapsed){ sec.classList.toggle('collapsed',collapsed);
+  var btn=sec.querySelector('.nav-head'), arrow=sec.querySelector('.nav-arrow');
+  if(btn){btn.setAttribute('aria-expanded',collapsed?'false':'true');
+    btn.title=collapsed?'Maximize section':'Minimize section';}
+  if(arrow)arrow.textContent=collapsed?'<':'>'; }
+function fcToggleNavGroup(id){ var sec=document.querySelector('[data-nav-group=\"'+id+'\"]');if(!sec)return;
+  var collapsed=!sec.classList.contains('collapsed');fcSetNavState(sec,collapsed);
+  try{localStorage.setItem(fcNavKey(id),collapsed?'1':'0');}catch(e){} }
+function fcInitNavGroups(){document.querySelectorAll('[data-nav-group]').forEach(function(sec){
+  var collapsed=false;try{collapsed=localStorage.getItem(fcNavKey(sec.dataset.navGroup))==='1';}catch(e){}
+  if(sec.dataset.active==='1')collapsed=false;fcSetNavState(sec,collapsed);});}
 
 var _cpBusy=false;
 async function cpSend(ev){ if(ev&&ev.preventDefault) ev.preventDefault();
@@ -333,7 +385,7 @@ function fcHidePdf(){ document.getElementById('fc-pdf-pane').classList.remove('o
   document.getElementById('fc-pdf-frame').src='about:blank'; }
 function fcWidePdf(){ document.getElementById('fc-pdf-pane').classList.toggle('wide'); }
 
-document.addEventListener('DOMContentLoaded', function(){ fcRenderHistory();
+document.addEventListener('DOMContentLoaded', function(){ fcRenderHistory(); fcInitNavGroups();
   if(location.pathname==='/app'){ var a=fcActive(); if(a && fcGet(a)) fcLoad(a); } });
 """
 
@@ -343,18 +395,24 @@ _SUGGESTIONS = ["cp_chip1", "cp_chip2", "cp_chip3", "cp_chip4"]
 def _left_nav(role: str, current_path: str, lang: str):
     active = _active_key(role, current_path)
     secs = []
-    for section_key, items in _nav_for(role):
+    for group_id, section_key, items in _nav_for(role):
         links = [
             A(Span(NotStr(icon), cls="nav-ic"), Span(t(i18n_key, lang)),
               href=href, cls="nav-item active" if active == key else "nav-item")
             for key, i18n_key, icon, href in items
         ]
-        block = [Div(t(section_key, lang), cls="nav-head"), *links]
-        if section_key == "nav_sec_agents":
-            block.append(A(Span("＋", cls="nav-ic"), Span(t("cp_new_chat", lang)),
-                           href="#", onclick="fcNewChat();return false;", cls="nav-item nav-newchat"))
-            block.append(Div(id="chat-history", cls="nav-history"))
-        secs.append(Div(*block, cls="nav-sec"))
+        body = list(links)
+        if any(item[0] == "copilot" for item in items):
+            body.append(A(Span("＋", cls="nav-ic"), Span(t("cp_new_chat", lang)),
+                          href="#", onclick="fcNewChat();return false;", cls="nav-item nav-newchat"))
+            body.append(Div(id="chat-history", cls="nav-history"))
+        is_active = any(item[0] == active for item in items)
+        secs.append(Div(
+            Button(Span(t(section_key, lang)), Span(">", cls="nav-arrow"),
+                   type="button", cls="nav-head", aria_expanded="true",
+                   onclick=f"fcToggleNavGroup('{group_id}')"),
+            Div(*body, cls="nav-group-body"),
+            cls="nav-sec", data_nav_group=group_id, data_active="1" if is_active else "0"))
     return Div(*secs, cls="ws-left")
 
 
@@ -474,7 +532,7 @@ def app_shell(title: str, *content, current_path: str = "/app", lang: str = DEFA
                  cls="ws", id="ws"),
              _pdf_pane(),
              Script(NotStr(SHELL_JS)),
-             cls="bg-bg text-ink font-sans antialiased"),
+             cls="bg-bg text-ink font-sans antialiased", data_role=role),
         lang=_lang_of(lang))
 
 
@@ -495,7 +553,7 @@ def app_home(req):
                  cls="ws", id="ws"),
              _pdf_pane(),
              Script(NotStr(SHELL_JS)),
-             cls="bg-bg text-ink font-sans antialiased"),
+             cls="bg-bg text-ink font-sans antialiased", data_role=role),
         lang=_lang_of(lang))
 
 

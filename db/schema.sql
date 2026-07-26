@@ -342,3 +342,13 @@ CREATE TABLE IF NOT EXISTS factorio.platform_settings (
 INSERT INTO factorio.platform_settings (key, value)
 VALUES ('display_currency', 'USD')
 ON CONFLICT (key) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS factorio.agent_prompt_versions (
+    id          BIGSERIAL PRIMARY KEY,
+    agent_slug  TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    changed_by  TEXT NOT NULL DEFAULT 'admin',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS agent_prompt_versions_slug_idx
+    ON factorio.agent_prompt_versions(agent_slug, id DESC);

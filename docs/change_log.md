@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-26 — Marketing agents, skills editor, and grouped navigation
+
+- Added dedicated **SEO & AI Search** and **Paid Marketing** specialists to the existing Admin Agent Fleet with read/draft-only tools and editable prompt files.
+- Added an Admin Agent Skills editor for viewing, editing, versioning, and reverting every fleet agent's live instructions; database overrides survive deployments and saves are audited.
+- Reorganized Investor and Admin navigation into logical role-scoped groups. Sections support persisted `>` minimize and `<` maximize controls and keep the active route visible.
+
 ## 2026-07-26 — Supplier bank and accounting connections
 
 - Added Lloyds Bank to the Supplier Profile as a planned, consent-based Open Banking connection.

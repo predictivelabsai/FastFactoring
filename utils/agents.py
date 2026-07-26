@@ -85,6 +85,13 @@ AGENTS = [
     ("marketing", "Investor Marketing", "Growth", "\U0001F4E3", "autonomous",
      "Investor acquisition & retention campaigns.",
      ["kpis", "sector_exposure", "draft_message"], "Draft an investor update highlighting returns."),
+    ("seo", "SEO & AI Search", "Growth", "🔎", "draft-only",
+     "Audits search visibility and drafts supplier/investor organic-growth plans.",
+     ["kpis", "seo_site_audit"], "Audit factorio.co.uk and prioritise the next five SEO improvements."),
+    ("paid_marketing", "Paid Marketing", "Growth", "📣", "draft-only",
+     "Plans paid acquisition across Google, LinkedIn and Meta without activating spend.",
+     ["kpis", "sector_exposure", "paid_campaign_plan", "draft_message"],
+     "Draft a £5,000 supplier-acquisition campaign with CAC guardrails."),
 ]
 
 PODS = ["Orchestration", "Origination", "Decisioning", "Servicing", "Oversight", "Growth"]
@@ -160,8 +167,51 @@ def _write_tools(slug: str):
         return (f"DRAFT to {recipient} — Subject: {subject}\n\n"
                 f"(Draft prepared by the {slug} agent; a human sends it.)\n{key_points}")
 
+    @tool
+    def seo_site_audit(url: str = "https://factorio.co.uk") -> str:
+        """Read a public Factorio page and report basic technical/on-page SEO evidence."""
+        import re
+        import urllib.request
+        if not url.startswith(("https://factorio.co.uk", "http://factorio.co.uk")):
+            return "Audit is restricted to factorio.co.uk."
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "FactorioSEOAgent/1.0"})
+            with urllib.request.urlopen(req, timeout=12) as response:
+                body = response.read(500_000).decode("utf-8", "ignore")
+            title = re.search(r"<title[^>]*>(.*?)</title>", body, re.I | re.S)
+            description = re.search(
+                r"""<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)""",
+                body, re.I)
+            canonical = bool(re.search(r"""rel=["']canonical""", body, re.I))
+            return "\n".join([
+                f"URL: {url}",
+                f"HTTP content inspected: {len(body):,} characters",
+                f"Title: {(title.group(1).strip() if title else 'MISSING')}",
+                f"Meta description: {(description.group(1).strip() if description else 'MISSING')}",
+                f"H1 count: {len(re.findall(r'<h1[ >]', body, re.I))}",
+                f"Canonical present: {'yes' if canonical else 'no'}",
+                f"JSON-LD blocks: {len(re.findall(r'application/ld\\+json', body, re.I))}",
+                "Read-only audit; no site content was changed.",
+            ])
+        except Exception as exc:  # noqa: BLE001
+            return f"SEO audit could not fetch the page ({type(exc).__name__})."
+
+    @tool
+    def paid_campaign_plan(audience: str, monthly_budget: int, channel: str = "Google") -> str:
+        """Create a draft-only paid acquisition brief; does not create or activate campaigns."""
+        if monthly_budget <= 0:
+            return "Budget must be positive."
+        return (
+            f"DRAFT CAMPAIGN — {channel}\n"
+            f"Audience: {audience}\nMonthly budget scenario: {monthly_budget:,}\n"
+            "Status: draft only; no platform call, publishing, activation, or spend.\n"
+            "Required before launch: conversion event, landing page, CAC ceiling, "
+            "negative/excluded audiences, creative approval, and named Admin approval."
+        )
+
     catalog = {"advance_deal": advance_deal, "log_dunning": log_dunning,
-               "set_facility_limit": set_facility_limit, "draft_message": draft_message}
+               "set_facility_limit": set_facility_limit, "draft_message": draft_message,
+               "seo_site_audit": seo_site_audit, "paid_campaign_plan": paid_campaign_plan}
     return catalog
 
 
@@ -185,10 +235,8 @@ def _tools_for(slug: str, tool_keys):
 
 
 def _prompt_for(slug: str, name: str, desc: str) -> str:
-    from utils.prompts import load_prompt
-    if slug == "supervisor":
-        return load_prompt("agent_supervisor.md")
-    return load_prompt("agent_worker.md").format(name=name, description=desc)
+    from utils.prompts import load_agent_prompt
+    return load_agent_prompt(slug, name, desc)
 
 
 def available() -> bool:
