@@ -1,0 +1,269 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Coolify" [ref=e8] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.459" [ref=e9] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.459
+        - button / [ref=e11]:
+          - img [ref=e12]
+          - generic [ref=e14]: /
+        - button "Preferences 9+" [ref=e17] [cursor=pointer]:
+          - img "Preferences" [ref=e18]
+          - generic [ref=e20]: 9+
+      - combobox [ref=e23]:
+        - option "Switch team" [disabled]
+        - option "kaljuvee's Team"
+        - option "Finespresso Team" [selected]
+      - list [ref=e24]:
+        - listitem [ref=e25]:
+          - list [ref=e26]:
+            - listitem [ref=e27]:
+              - link "Dashboard" [ref=e28] [cursor=pointer]:
+                - /url: /
+                - img [ref=e29]
+                - text: Dashboard
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e33]
+                - text: Projects
+            - listitem [ref=e38]:
+              - link "Servers" [ref=e39] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e40]
+                - text: Servers
+            - listitem [ref=e45]:
+              - link "Sources" [ref=e46] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/sources
+                - img [ref=e47]
+                - text: Sources
+            - listitem [ref=e49]:
+              - link "Destinations" [ref=e50] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/destinations
+                - img [ref=e51]
+                - text: Destinations
+            - listitem [ref=e53]:
+              - link "S3 Storages" [ref=e54] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/storages
+                - img [ref=e55]
+                - text: S3 Storages
+            - listitem [ref=e60]:
+              - link "Shared Variables" [ref=e61] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/shared-variables
+                - img [ref=e62]
+                - text: Shared Variables
+            - listitem [ref=e66]:
+              - link "Notifications" [ref=e67] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/notifications/email
+                - img [ref=e68]
+                - text: Notifications
+            - listitem [ref=e70]:
+              - link "Keys & Tokens" [ref=e71] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/security/private-key
+                - img [ref=e72]
+                - text: Keys & Tokens
+            - listitem [ref=e74]:
+              - link "Tags" [ref=e75] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/tags
+                - img [ref=e76]
+                - text: Tags
+            - listitem [ref=e80]:
+              - link "Terminal" [ref=e81] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/terminal
+                - img [ref=e82]
+                - text: Terminal
+            - listitem [ref=e85]:
+              - link "Profile" [ref=e86] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/profile
+                - img [ref=e87]
+                - text: Profile
+            - listitem [ref=e92]:
+              - link "Teams" [ref=e93] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/team
+                - img [ref=e94]
+                - text: Teams
+            - listitem [ref=e102]:
+              - link "Settings" [ref=e103] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e104]
+                - text: Settings
+            - listitem [ref=e310]:
+              - generic "New version available" [ref=e311]:
+                - button "Upgrade" [ref=e313] [cursor=pointer]:
+                  - img [ref=e314]
+                  - text: Upgrade
+            - listitem [ref=e109]:
+              - link "Sponsor us" [ref=e110] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e111]
+                - text: Sponsor us
+            - listitem [ref=e115]:
+              - generic "Send us feedback or get help!" [ref=e118] [cursor=pointer]:
+                - img [ref=e119]
+                - text: Feedback
+            - listitem [ref=e121]:
+              - button "Logout" [ref=e123]:
+                - img [ref=e124]
+                - text: Logout
+    - main [ref=e126]:
+      - generic [ref=e128]:
+        - heading "Configuration" [level=1] [ref=e129]
+        - navigation [ref=e130]:
+          - navigation [ref=e131]:
+            - list [ref=e132]:
+              - listitem [ref=e133]:
+                - generic [ref=e134]:
+                  - link "predictive labs apps" [ref=e135] [cursor=pointer]:
+                    - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c
+                  - button [ref=e136]:
+                    - img [ref=e137]
+              - listitem [ref=e139]:
+                - generic [ref=e140]:
+                  - link "production" [ref=e141] [cursor=pointer]:
+                    - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks
+                  - button [ref=e142]:
+                    - img [ref=e143]
+              - listitem [ref=e145]:
+                - generic [ref=e146]:
+                  - link "predictivelabsai/factorio:main-yok8gw0kg4kocossoswsw084 (finespresso-server)" [ref=e147] [cursor=pointer]:
+                    - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k
+                  - button [ref=e148]:
+                    - img [ref=e149]
+              - generic [ref=e151]:
+                - link "Running" [ref=e154] [cursor=pointer]:
+                  - /url: https://github.com/predictivelabsai/factorio/commit/145ceaa8a2c8454843195365d28117e524909cb8
+                - generic [ref=e155]: (unknown)
+                - img [ref=e159] [cursor=pointer]
+              - button "Refresh Status" [ref=e160]:
+                - img [ref=e161]
+          - generic [ref=e163]:
+            - navigation [ref=e164]:
+              - link "Configuration" [ref=e165] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k
+              - link "Deployments" [ref=e166] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/deployment
+              - link "Logs" [ref=e167] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/logs
+                - generic [ref=e168]: Logs
+              - link "Terminal" [ref=e169] [cursor=pointer]:
+                - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/terminal
+              - button "Links" [ref=e171]:
+                - generic [ref=e172]: Links
+                - img [ref=e173]
+            - generic [ref=e175]:
+              - button "Advanced" [ref=e178]:
+                - generic [ref=e179]: Advanced
+                - img [ref=e180]
+              - generic [ref=e182]:
+                - button "Redeploy" [ref=e183] [cursor=pointer]:
+                  - img [ref=e184]
+                  - text: Redeploy
+                - button "Restart" [ref=e186] [cursor=pointer]:
+                  - img [ref=e187]
+                  - text: Restart
+                - button "Stop" [ref=e192] [cursor=pointer]:
+                  - img [ref=e193]
+                  - text: Stop
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - link "General" [ref=e197] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k
+            - link "Advanced" [ref=e198] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/advanced
+            - link "Environment Variables" [ref=e199] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/environment-variables
+            - link "Persistent Storage" [ref=e200] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/persistent-storage
+            - link "Git Source" [ref=e201] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/source
+            - link "Servers" [ref=e202] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/servers
+            - link "Scheduled Tasks" [ref=e203] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/scheduled-tasks
+            - link "Webhooks" [ref=e204] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/webhooks
+            - link "Preview Deployments" [ref=e205] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/preview-deployments
+            - link "Healthcheck" [ref=e206] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/healthcheck
+            - link "Rollback" [ref=e207] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/rollback
+            - link "Resource Limits" [ref=e208] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/resource-limits
+            - link "Resource Operations" [ref=e209] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/resource-operations
+            - link "Metrics" [ref=e210] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/metrics
+            - link "Tags" [ref=e211] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/tags
+            - link "Danger Zone" [ref=e212] [cursor=pointer]:
+              - /url: http://72.62.88.13:8000/project/d4wgogcokwsgw4oc4k0cco8c/environment/hg4wgcgwkg8oc8kkwoo8wwks/application/vsc4ws8g40cswoss40g0o48k/danger
+          - generic [ref=e214]:
+            - generic [ref=e215]:
+              - heading "Webhooks" [level=2] [ref=e216]
+              - img [ref=e219] [cursor=pointer]
+            - generic [ref=e222]:
+              - generic [ref=e223]:
+                - text: Deploy Webhook (auth required)
+                - img [ref=e226] [cursor=pointer]
+              - textbox [ref=e228]: https://coolify.finespresso.org/api/v1/deploy?uuid=vsc4ws8g40cswoss40g0o48k&force=false
+            - generic [ref=e229]:
+              - heading "Manual Git Webhooks" [level=3] [ref=e230]
+              - generic [ref=e231]:
+                - generic [ref=e232]:
+                  - generic [ref=e233]:
+                    - generic [ref=e234]:
+                      - text: GitHub
+                      - img [ref=e237] [cursor=pointer]
+                    - textbox [ref=e239]: https://coolify.finespresso.org/webhooks/source/github/events/manual
+                  - generic [ref=e240]:
+                    - generic [ref=e241]:
+                      - text: GitHub Webhook Secret
+                      - img [ref=e244] [cursor=pointer]
+                    - generic [ref=e246]:
+                      - img [ref=e248] [cursor=pointer]
+                      - textbox [ref=e252]
+                - link "Webhook Configuration on GitHub" [ref=e253] [cursor=pointer]:
+                  - /url: https://github.com/predictivelabsai/factorio/settings/hooks
+                  - button "Webhook Configuration on GitHub" [ref=e254]:
+                    - text: Webhook Configuration on GitHub
+                    - img [ref=e255]
+                - generic [ref=e257]:
+                  - generic [ref=e258]:
+                    - generic [ref=e259]: GitLab
+                    - textbox [ref=e260]: https://coolify.finespresso.org/webhooks/source/gitlab/events/manual
+                  - generic [ref=e261]:
+                    - generic [ref=e262]:
+                      - text: GitLab Webhook Secret
+                      - img [ref=e265] [cursor=pointer]
+                    - generic [ref=e267]:
+                      - img [ref=e269] [cursor=pointer]
+                      - textbox [ref=e273]
+                - generic [ref=e274]:
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: Bitbucket
+                    - textbox [ref=e277]: https://coolify.finespresso.org/webhooks/source/bitbucket/events/manual
+                  - generic [ref=e278]:
+                    - generic [ref=e279]:
+                      - text: Bitbucket Webhook Secret
+                      - img [ref=e282] [cursor=pointer]
+                    - generic [ref=e284]:
+                      - img [ref=e286] [cursor=pointer]
+                      - textbox [ref=e290]
+                - generic [ref=e291]:
+                  - generic [ref=e292]:
+                    - generic [ref=e293]: Gitea
+                    - textbox [ref=e294]: https://coolify.finespresso.org/webhooks/source/gitea/events/manual
+                  - generic [ref=e295]:
+                    - generic [ref=e296]:
+                      - text: Gitea Webhook Secret
+                      - img [ref=e299] [cursor=pointer]
+                    - generic [ref=e301]:
+                      - img [ref=e303] [cursor=pointer]
+                      - textbox [ref=e307]
+                - button "Save" [ref=e308] [cursor=pointer]
+  - img
+  - list
