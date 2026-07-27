@@ -1,0 +1,4 @@
+interface:
+  display_name: "Factorio Version Release"
+  short_description: "Bump Factorio versions and update the change log"
+  default_prompt: "Use $factorio-version-release to prepare the Factorio repository version and change-log update for this release."

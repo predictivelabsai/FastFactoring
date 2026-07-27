@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-27 — v1.0.0
+
+- Established the Factorio AI Platform Demo as the initial versioned baseline.
+- Added a repository release skill that applies Semantic Versioning and requires every release bump to update this change log in the same commit.
+- Kept documentation-only, screenshot, evaluation, and archive commits from creating artificial release churn.
+
 ## 2026-07-26 — Borrower transactional email skills
 
 - Added Factorio-branded Markdown templates under `email/templates/` for paused bank connections and optional QuickBooks, Xero, or Sage connections.

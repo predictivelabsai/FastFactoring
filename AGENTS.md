@@ -34,3 +34,11 @@ No automated test suite or coverage threshold is currently committed. Before sub
 ## Commit & Pull Request Guidelines
 
 Recent commits use concise, imperative, scope-led subjects, such as `mobile: left nav becomes a slide-in drawer` and `docs(ru): user guide parity`. Keep each commit focused. Pull requests should explain behavior changes, migration or configuration impact, and manual verification performed; link related issues and include before/after screenshots for visible UI changes. Never commit `.env`, credentials, or production data.
+
+## Release Versioning
+
+`VERSION` is the release source of truth. For release-significant commits, use
+`skills/factorio-version-release/SKILL.md` to choose the Semantic Versioning
+bump and prepend the matching entry to `docs/change_log.md` in the same commit.
+Do not bump for intermediate commits, generated screenshots, formatting, tests,
+or archive-only changes unless they are intentionally released.
