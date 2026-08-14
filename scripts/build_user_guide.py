@@ -1,10 +1,10 @@
 """Build the Factorio user guide in four formats, per language (en / ru).
 
 For each language it writes, into docs/, a date-slugged set:
-    factorio_user_guide_<YYYY-MM-DD>_<lang>.md     (source slide deck)
-    factorio_user_guide_<YYYY-MM-DD>_<lang>.html   (markdown + assets/guide.css)
-    factorio_user_guide_<YYYY-MM-DD>_<lang>.pdf     (WeasyPrint, A4 landscape slides)
-    factorio_user_guide_<YYYY-MM-DD>_<lang>.pptx    (python-pptx, 16:9 deck)
+    fastfactoring_user_guide_<YYYY-MM-DD>_<lang>.md     (source slide deck)
+    fastfactoring_user_guide_<YYYY-MM-DD>_<lang>.html   (markdown + assets/guide.css)
+    fastfactoring_user_guide_<YYYY-MM-DD>_<lang>.pdf     (WeasyPrint, A4 landscape slides)
+    fastfactoring_user_guide_<YYYY-MM-DD>_<lang>.pptx    (python-pptx, 16:9 deck)
 
 One slide per screen; screenshots live in docs/img/<lang>-NN-*.png. Content is
 authored once below (bilingual) so all formats and both languages stay in sync.
@@ -76,7 +76,7 @@ SLIDES = [
                 "An invoice-financing marketplace connecting two sides: **sellers** who need cash now and **investors** seeking short-term, asset-backed returns.",
                 "One site serves both — a marketing front and an HTMX-driven product app.",
                 "The hero summarizes the model: advance rate, days-to-funding, sectors served and total funded volume (UZS).",
-                "Fully trilingual — English, Oʻzbekcha and Russian — switched from the top navigation.",
+                "Twelve European languages are enabled by default; administrators can also enable the retained Uzbek and Russian catalogues.",
             ],
             "ru": [
                 "Маркетплейс факторинга, соединяющий две стороны: **продавцов**, которым нужны деньги сейчас, и **инвесторов**, ищущих краткосрочный доход, обеспеченный активами.",
@@ -356,13 +356,13 @@ SLIDES = [
                 "Configure automated bidding: minimum risk grade, maximum amount per invoice and preferred sectors.",
                 "Toggle the strategy active/inactive; the status is shown at the top.",
                 "Rules are saved per investor and applied to matching new invoices.",
-                "Modelled on investly.co's autobidder.",
+                "Keeps repeat investment decisions consistent and reviewable.",
             ],
             "ru": [
                 "Настройте автоматические заявки: минимальный рейтинг риска, максимальную сумму на счёт и предпочитаемые отрасли.",
                 "Включайте и выключайте стратегию; статус показан сверху.",
                 "Правила сохраняются для каждого инвестора и применяются к подходящим новым счетам.",
-                "Создано по образцу автобиддера investly.co.",
+                "Обеспечивает последовательность и прозрачность повторных инвестиционных решений.",
             ],
         },
     },
@@ -398,7 +398,7 @@ SLIDES = [
                 "Sellers describe an invoice and debtor in plain language; the assistant collects only what is still missing.",
                 "It returns an **indicative risk band (A–D)**, an **advance rate** and the **documents the bank needs next** — in seconds, not days.",
                 "Powered by **Grok (x.ai)**; everything is indicative and subject to verification — no final decision is automated.",
-                "Fully trilingual — the assistant replies in the visitor's language (English, Oʻzbekcha, Russian).",
+                "The assistant follows the selected application language across the complete enabled locale cohort.",
             ],
             "ru": [
                 "Продавцы описывают счёт и должника обычными словами; ассистент запрашивает только недостающее.",
@@ -595,7 +595,7 @@ def build_pptx(lang: str, out: Path) -> None:
 # ── Driver ─────────────────────────────────────────────────────────────────
 
 def build_lang(lang: str) -> None:
-    base = DOCS / f"factorio_user_guide_{DATE}_{lang}"
+    base = DOCS / f"fastfactoring_user_guide_{DATE}_{lang}"
     md_text = build_markdown(lang)
     (base.with_suffix(".md")).write_text(md_text, encoding="utf-8")
 

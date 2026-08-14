@@ -1,24 +1,56 @@
-"""Internationalisation — English, Uzbek, Russian translations.
+"""Application-wide internationalisation and language governance.
 
 Usage:
     from utils.i18n import t, get_lang
-    lang = get_lang(req)           # reads cookie, defaults to 'en'
+    lang = get_lang(req)           # session/cookie/browser negotiation
     t("hero_headline", lang)       # returns translated string
+
+English copy remains the source and fallback. Checked-in JSON catalogues power
+the active European locales; the original Uzbek and Russian translations remain
+available for an administrator to enable when required.
 """
 
 from __future__ import annotations
 
-# English is always first and is the default (no IP auto-detect).
-SUPPORTED_LANGS = ("en", "uz", "ru", "es", "fr")
+import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import date, datetime
+from functools import lru_cache
+from pathlib import Path
+from time import monotonic
+from typing import Any
+from urllib.parse import unquote, urlsplit
+
+
 DEFAULT_LANG = "en"
 
 LANG_META = {
     "en": {"flag": "\U0001F1EC\U0001F1E7", "label": "EN", "name": "English"},
-    "uz": {"flag": "\U0001F1FA\U0001F1FF", "label": "UZ", "name": "O'zbekcha"},
-    "ru": {"flag": "\U0001F1F7\U0001F1FA", "label": "RU", "name": "Русский"},
-    "es": {"flag": "\U0001F1EA\U0001F1F8", "label": "ES", "name": "Español"},
-    "fr": {"flag": "\U0001F1EB\U0001F1F7", "label": "FR", "name": "Français"},
+    "et": {"flag": "🇪🇪", "label": "ET", "name": "Eesti"},
+    "de": {"flag": "🇩🇪", "label": "DE", "name": "Deutsch"},
+    "fr": {"flag": "🇫🇷", "label": "FR", "name": "Français"},
+    "sv": {"flag": "🇸🇪", "label": "SV", "name": "Svenska"},
+    "lv": {"flag": "🇱🇻", "label": "LV", "name": "Latviešu"},
+    "no": {"flag": "🇳🇴", "label": "NO", "name": "Norsk"},
+    "da": {"flag": "🇩🇰", "label": "DA", "name": "Dansk"},
+    "pl": {"flag": "🇵🇱", "label": "PL", "name": "Polski"},
+    "nl": {"flag": "🇳🇱", "label": "NL", "name": "Nederlands"},
+    "fi": {"flag": "🇫🇮", "label": "FI", "name": "Suomi"},
+    "lt": {"flag": "🇱🇹", "label": "LT", "name": "Lietuvių"},
+    "ru": {"flag": "🇷🇺", "label": "RU", "name": "Русский"},
+    "uz": {"flag": "🇺🇿", "label": "UZ", "name": "O‘zbekcha"},
 }
+
+# FastClinic/FastSME locale cohort. RU and UZ are retained but disabled until
+# explicitly selected in the admin language settings screen.
+DEFAULT_ENABLED_LANGS = (
+    "en", "et", "de", "fr", "sv", "lv", "no", "da", "pl", "nl", "fi", "lt",
+)
+SUPPORTED_LANGS = tuple(LANG_META)
+LOCALES_DIR = Path(__file__).resolve().parent / "locales"
+_CURRENT_LANG: ContextVar[str] = ContextVar("factorio_lang", default=DEFAULT_LANG)
+_enabled_cache: tuple[float, tuple[str, ...]] | None = None
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     # ── Navbar ──────────────────────────────────────────────────────
@@ -661,6 +693,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "app_role_label":       {"en": "Role",               "uz": "Rol",                  "ru": "Роль"},
     "role_investor":        {"en": "Investor",           "uz": "Investor",             "ru": "Инвестор"},
     "role_seller":          {"en": "Seller",             "uz": "Sotuvchi",             "ru": "Продавец"},
+    "role_supplier":        {"en": "Supplier",           "uz": "Yetkazib beruvchi",    "ru": "Поставщик"},
     "role_payer":           {"en": "Payer",              "uz": "To'lovchi",            "ru": "Плательщик"},
     "role_admin":           {"en": "Admin",              "uz": "Administrator",        "ru": "Админ"},
     "subrole_ops":          {"en": "Operations",         "uz": "Operatsiyalar",        "ru": "Операции"},
@@ -694,6 +727,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "nav_admin_funding":    {"en": "Funding",            "uz": "Moliyalashtirish",     "ru": "Финансирование"},
     "nav_admin_reports":    {"en": "Reports",            "uz": "Hisobotlar",           "ru": "Отчёты"},
     "nav_admin_audit":      {"en": "Audit log",          "uz": "Audit jurnali",        "ru": "Журнал аудита"},
+    "nav_languages":        {"en": "Languages",          "uz": "Tillar",               "ru": "Языки"},
     "admin_eyebrow":        {"en": "Back office · Admin console", "uz": "Backoffice · Admin konsoli", "ru": "Бэк-офис · Консоль администратора"},
     "admin_h1":             {"en": "Operations console", "uz": "Operatsiyalar konsoli","ru": "Операционная консоль"},
     "admin_lede":           {"en": "Role-scoped back office for onboarding, risk, funding, collections and reporting — every action written to the audit log.",
@@ -705,23 +739,228 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
                              "ru": "Ваша роль не имеет доступа к этому действию (разделение обязанностей)."},
 }
 
-# Spanish/French are kept in a generated overlay (scripts/translate_i18n.py) and
-# merged in here so the base dict stays readable. Missing keys fall back to English.
-try:  # pragma: no cover - overlay is optional
-    from utils.i18n_es_fr import EXTRA as _EXTRA
-    for _k, _v in _EXTRA.items():
-        TRANSLATIONS.setdefault(_k, {}).update(_v)
-except Exception:
-    pass
+class NoTranslate(str):
+    """Marker for database, user-entered, identifier, and source-system values."""
 
 
-def t(key: str, lang: str = DEFAULT_LANG) -> str:
+def preserve(value: Any) -> NoTranslate:
+    return NoTranslate("" if value is None else str(value))
+
+
+def _ensure_language_store() -> None:
+    from db import execute
+    execute("CREATE TABLE IF NOT EXISTS factorio.kv "
+            "(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+
+
+def enabled_languages(*, refresh: bool = False) -> tuple[str, ...]:
+    """Return the admin-enabled languages, always including English.
+
+    Database failures deliberately fall back to the FastSME defaults so public
+    pages remain available during setup or maintenance.
+    """
+    global _enabled_cache
+    now = monotonic()
+    if not refresh and _enabled_cache and now - _enabled_cache[0] < 5:
+        return _enabled_cache[1]
+    result = DEFAULT_ENABLED_LANGS
+    try:
+        _ensure_language_store()
+        from db import fetch_one
+        row = fetch_one("SELECT value FROM factorio.kv WHERE key='enabled_languages'")
+        if row:
+            requested = json.loads(row["value"])
+            selected = tuple(code for code in LANG_META if code in requested)
+            if DEFAULT_LANG not in selected:
+                selected = (DEFAULT_LANG, *selected)
+            if selected:
+                result = selected
+    except Exception:
+        pass
+    _enabled_cache = (now, result)
+    return result
+
+
+def set_enabled_languages(languages: list[str] | tuple[str, ...] | set[str]) -> tuple[str, ...]:
+    """Persist the admin-selected language set. English cannot be disabled."""
+    global _enabled_cache
+    requested = {str(code).lower() for code in languages}
+    requested.add(DEFAULT_LANG)
+    selected = tuple(code for code in LANG_META if code in requested)
+    _ensure_language_store()
+    from db import execute
+    execute(
+        "INSERT INTO factorio.kv (key,value) VALUES ('enabled_languages',%(v)s) "
+        "ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value",
+        {"v": json.dumps(selected)},
+    )
+    _enabled_cache = (monotonic(), selected)
+    return selected
+
+
+@lru_cache(maxsize=None)
+def _catalog(lang: str) -> dict[str, str]:
+    if lang in {DEFAULT_LANG, "ru", "uz"} or lang not in LANG_META:
+        return {}
+    try:
+        data = json.loads((LOCALES_DIR / f"{lang}.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def catalog(lang: str) -> dict[str, str]:
+    return dict(_catalog(lang))
+
+
+def current_lang() -> str:
+    return _CURRENT_LANG.get()
+
+
+@contextmanager
+def using_lang(lang: str):
+    code = lang if lang in LANG_META else DEFAULT_LANG
+    token = _CURRENT_LANG.set(code)
+    try:
+        yield code
+    finally:
+        _CURRENT_LANG.reset(token)
+
+
+def t(key: str, lang: str | None = None, **values: Any) -> str:
+    """Translate an i18n key or an English source string."""
+    code = current_lang() if lang is None else lang
     entry = TRANSLATIONS.get(key)
-    if not entry:
-        return key
-    return entry.get(lang, entry.get(DEFAULT_LANG, key))
+    source = entry.get(DEFAULT_LANG, key) if entry else key
+    if code in {"ru", "uz"} and entry:
+        translated = entry.get(code, source)
+    elif code == DEFAULT_LANG:
+        translated = source
+    else:
+        translated = _catalog(code).get(source, source)
+    if values:
+        try:
+            return translated.format(**values)
+        except (KeyError, ValueError):
+            return source.format(**values)
+    return translated
+
+
+def detect_language(req, allowed: tuple[str, ...] | None = None) -> str:
+    allowed = allowed or enabled_languages()
+    header = (getattr(req, "headers", {}) or {}).get("accept-language", "")
+    preferences: list[tuple[float, int, str]] = []
+    for index, item in enumerate(header.split(",")):
+        parts = item.strip().split(";")
+        code = parts[0].split("-")[0].lower()
+        quality = 1.0
+        for parameter in parts[1:]:
+            if parameter.strip().startswith("q="):
+                try:
+                    quality = float(parameter.strip()[2:])
+                except ValueError:
+                    quality = 0.0
+        if quality > 0:
+            preferences.append((quality, -index, code))
+    for _, _, code in sorted(preferences, reverse=True):
+        if code in allowed:
+            return code
+    return DEFAULT_LANG
 
 
 def get_lang(req) -> str:
-    lang = req.cookies.get("lang", DEFAULT_LANG)
-    return lang if lang in SUPPORTED_LANGS else DEFAULT_LANG
+    allowed = enabled_languages()
+    session = getattr(req, "session", None)
+    candidates = [session.get("lang") if session else None,
+                  (getattr(req, "cookies", {}) or {}).get("lang")]
+    code = next((str(item).lower() for item in candidates if item and str(item).lower() in allowed), None)
+    code = code or detect_language(req, allowed)
+    if session is not None:
+        session["lang"] = code
+    return code
+
+
+def safe_return_path(value: str | None) -> str:
+    value = value or "/"
+    parsed = urlsplit(value)
+    decoded = unquote(parsed.path)
+    if (parsed.scheme or parsed.netloc or not decoded.startswith("/")
+            or decoded.startswith("//") or "\\" in decoded
+            or any(ord(character) < 32 for character in unquote(value))):
+        return "/"
+    return parsed.path + (f"?{parsed.query}" if parsed.query else "")
+
+
+def localize_tree(value: Any, lang: str | None = None) -> Any:
+    """Translate catalogued literal text and accessibility attributes in an FT tree."""
+    code = current_lang() if lang is None else lang
+    if code in {DEFAULT_LANG, "ru", "uz"}:
+        return value
+    translations = _catalog(code)
+    try:
+        from fastcore.basics import NotStr
+        from fastcore.xml import FT
+    except ImportError:  # pragma: no cover
+        return value
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, NoTranslate):
+            return node
+        if isinstance(node, FT):
+            node.children = tuple(walk(child) for child in node.children)
+            for attr in ("placeholder", "title", "aria-label", "aria_label"):
+                raw = node.attrs.get(attr)
+                if isinstance(raw, str) and raw in translations:
+                    node.attrs[attr] = translations[raw]
+            return node
+        if isinstance(node, NotStr):
+            raw = str(node)
+            return NotStr(translations.get(raw, raw))
+        if isinstance(node, str):
+            return translations.get(node, node)
+        if isinstance(node, tuple):
+            return tuple(walk(item) for item in node)
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        return node
+
+    return walk(value)
+
+
+_DECIMAL_COMMA = frozenset({"et", "de", "fr", "sv", "lv", "no", "da", "pl", "nl", "fi", "lt"})
+
+
+def format_number(value: float | int, lang: str | None = None, decimals: int = 0) -> str:
+    code = current_lang() if lang is None else lang
+    rendered = f"{value:,.{decimals}f}"
+    if code in _DECIMAL_COMMA:
+        group = "\u202f" if code == "fr" else "\u00a0"
+        rendered = rendered.replace(",", "\0").replace(".", ",").replace("\0", group)
+    return rendered
+
+
+def format_currency(value: float | int | None, currency: str = "USD", lang: str | None = None,
+                    decimals: int = 0) -> str:
+    code = current_lang() if lang is None else lang
+    amount = format_number(float(value or 0), code, decimals)
+    symbol = {"GBP": "£", "EUR": "€", "USD": "$"}.get(currency, currency)
+    return f"{amount}\u00a0{symbol}" if code in _DECIMAL_COMMA else f"{symbol}{amount}"
+
+
+def format_date(value: str | date | datetime | None, lang: str | None = None) -> str:
+    if not value:
+        return "—"
+    code = current_lang() if lang is None else lang
+    try:
+        parsed = value.date() if isinstance(value, datetime) else value
+        if isinstance(parsed, str):
+            parsed = date.fromisoformat(parsed[:10])
+        if not isinstance(parsed, date):
+            return str(value)[:10]
+    except (TypeError, ValueError):
+        return str(value)[:10]
+    if code == "en":
+        return parsed.strftime("%d/%m/%Y")
+    if code in {"sv", "lt"}:
+        return parsed.strftime("%Y-%m-%d")
+    return parsed.strftime("%d.%m.%Y")

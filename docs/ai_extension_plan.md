@@ -22,7 +22,7 @@ The repository now ships a working, dependency-light AI layer:
 | AI client | `utils/ai.py` | stdlib `urllib` Grok chat client; graceful degradation; conversation + context builders |
 | Triage assistant | `app_routes/assistant.py` → `/app/triage` | chat-based **loan/invoice-application triage** (seller side) |
 | Reporting assistant | `app_routes/assistant.py` → `/app/assistant` | chat-based **investor reporting**, grounded in the investor's own positions |
-| i18n | `utils/i18n.py` | all assistant copy in en / uz / ru |
+| i18n | `utils/i18n.py` | assistant follows every enabled checked-in locale; RU/UZ are retained but off by default |
 
 Design choices that carry into production:
 

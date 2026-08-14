@@ -1,8 +1,8 @@
 """Account statement: /app/statement — unified, filterable transaction ledger.
 
-Modelled on investly.co's Account statement: investments (cash out) and
-settlements (principal + interest back in) for the current investor, with
-period / amount / counterparty / invoice / type filters and a CSV export.
+Combines investments (cash out) and settlements (principal + interest back in)
+for the current investor, with period / amount / counterparty / invoice / type
+filters and a CSV export.
 """
 
 from __future__ import annotations
@@ -202,12 +202,16 @@ def statement_export(req):
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["date", "type", "counterparty", "invoice_number", "amount_uzs"])
+    from utils.money import convert_amount, display_currency
+    currency = display_currency()
+    w.writerow(["date", "type", "counterparty", "invoice_number",
+                f"amount_{currency.lower()}"])
     for r in rows:
         d = r["txn_date"]
         dstr = str(d.date()) if hasattr(d, "date") else (str(d) if d else "")
+        amount, _ = convert_amount(r["amount"], currency)
         w.writerow([dstr, r["txn_type"], r["counterparty"], r["invoice_number"],
-                    f"{float(r['amount'] or 0):.2f}"])
+                    f"{amount:.2f}"])
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",

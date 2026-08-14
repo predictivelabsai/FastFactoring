@@ -1,10 +1,4 @@
-"""Shared helpers for the /app/* investor product.
-
-Investor identity (cookie-based switcher — no password, per product decision),
-the app sub-navigation chrome, the UZS money formatter, and small reporting
-helpers (days-late aging buckets) used across the cockpit, statement and
-dashboard.
-"""
+"""Shared authenticated role, navigation, money, and reporting helpers."""
 
 from __future__ import annotations
 
@@ -86,7 +80,7 @@ def set_investor(req, investor_id: int = 0):
     return resp
 
 
-# ── Roles / RBAC (demo-grade: cookie-based role switcher, no password) ─────
+# ── Roles / RBAC ─────────────────────────────────────────────────────────
 
 ROLES = ("investor", "supplier", "payer", "admin")
 # Segregation of duties is collapsed: Admin is a single full-access role. The old
@@ -102,25 +96,27 @@ def _norm_role(r: str | None) -> str:
 
 
 def current_role(req) -> str:
-    # A real logged-in session wins; otherwise fall back to the demo cookie switcher.
+    """Resolve the immutable session role; browser cookies cannot elevate it."""
     s = getattr(req, "session", None) if req is not None else None
     if s and s.get("role"):
-        return _norm_role(s["role"])
-    return _norm_role(req.cookies.get("role", "investor") if req is not None else "investor")
+        role = _norm_role(s["role"])
+        if role == "admin":
+            from app_routes.auth import ADMIN_EMAIL
+            if str(s.get("uid", "")).lower() != ADMIN_EMAIL:
+                return "investor"
+        return role
+    return "investor"
 
 
 def current_subrole(req) -> str:
-    # SoD collapsed — Admin has full access.
-    return "super"
+    # Legacy action gates all accept "super"; only the sole admin receives it.
+    return "super" if current_role(req) == "admin" else "ops"
 
 
 @rt("/app/set-role")
 def set_role(req, role: str = "investor"):
-    referer = req.headers.get("referer", "/app")
-    resp = RedirectResponse(referer, status_code=303)
-    role = _norm_role(role)
-    resp.set_cookie("role", role, max_age=365 * 24 * 3600, httponly=False, samesite="lax")
-    return resp
+    """Legacy endpoint retained as a safe no-op; roles come from authentication."""
+    return RedirectResponse("/app", status_code=303)
 
 
 # ── Aging buckets (days past due) ───────────────────────────────────────
@@ -213,18 +209,11 @@ def _investor_switcher(investor: dict | None, investors: list[dict], lang: str):
 
 
 def _role_switcher(role: str, lang: str):
-    role_opts = [Option(t(f"role_{r}", lang), value=r, selected=(r == role)) for r in ROLES]
-    # switching role sets the cookie and jumps to the Copilot chat (the default view)
-    role_sel = Select(
-        *role_opts,
-        onchange=("document.cookie='role='+this.value+';path=/;max-age=31536000;samesite=lax';"
-                  "location.href='/app';"),
-        cls=_sel_cls(),
-    )
     return Div(
         Span(t("app_role_label", lang),
              cls="text-[11px] font-mono uppercase tracking-widest text-ink-dim hidden sm:inline"),
-        role_sel, cls="flex items-center gap-2")
+        Span(t(f"role_{role}", lang), cls="text-sm text-ink font-medium"),
+        cls="flex items-center gap-2")
 
 
 def app_subnav(current_path: str, lang: str,
@@ -238,11 +227,11 @@ def app_subnav(current_path: str, lang: str,
         for key, href in links
     ]
     right = _investor_switcher(investor, investors, lang) if role == "investor" \
-        else _role_switcher(role, subrole, lang)
+        else _role_switcher(role, lang)
     return Nav(
         Div(
             Ul(*items, cls="flex items-center gap-5 md:gap-7 flex-wrap"),
-            Div(_role_switcher(role, subrole, lang) if role == "investor" else Span("", cls="hidden"),
+            Div(_role_switcher(role, lang) if role == "investor" else Span("", cls="hidden"),
                 right, cls="flex items-center gap-3"),
             cls="max-w-7xl mx-auto px-5 md:px-6 flex items-center justify-between gap-4 h-12",
         ),

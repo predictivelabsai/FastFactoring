@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import secrets
+from urllib.parse import urlencode
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, Style, NotStr,
@@ -19,7 +20,9 @@ from fasthtml.common import (
 from starlette.responses import JSONResponse, StreamingResponse
 
 from app import rt
-from utils.i18n import t, get_lang, LANG_META, SUPPORTED_LANGS, DEFAULT_LANG
+from utils.i18n import (
+    DEFAULT_LANG, LANG_META, enabled_languages, get_lang, localize_tree, t,
+)
 from landing.components import TAILWIND_CONFIG, SITE_NAME
 from utils.copilot import copilot_available
 
@@ -53,6 +56,7 @@ TOOLS = {
     "integrations": ("nav_integrations",       "\U0001F517", "/app/admin/integrations"),
     "reports_admin":("nav_admin_reports",      "\U0001F4C8", "/app/admin/reports"),
     "audit":        ("nav_admin_audit",        "\U0001F4DC", "/app/admin/audit"),
+    "languages":    ("nav_languages",          "🌐",         "/app/admin/languages"),
     "pipeline":     ("nav_pipeline",           "\U0001F4C7", "/app/crm"),
     "drive":        ("nav_drive",              "\U0001F5C2️", "/app/drive"),
     "docs":         ("nav_docs",               "\U0001F4DD", "/app/docs"),
@@ -67,7 +71,7 @@ _TOOLS_BY_ROLE = {
     "payer":    ["payer"],
     "admin":    ["console", "settings", "onboarding", "processing", "risk", "scoring", "funding",
                  "collections", "accounting", "compliance", "integrations",
-                 "reports_admin", "audit", "pipeline", "drive", "docs", "mail",
+                 "reports_admin", "audit", "languages", "pipeline", "drive", "docs", "mail",
                  "dashboard", "marketplace", "auctions", "secondary", "portfolio", "statement"],
 }
 
@@ -490,12 +494,11 @@ def _head(title: str, lang: str):
     ]
 
 
-def _lang_pill(lang: str):
+def _lang_pill(lang: str, current_path: str):
     opts = [A(Span(LANG_META[c]["flag"], cls="mr-2"), Span(LANG_META[c]["name"], cls="text-xs"),
-              href=f"/set-lang?lang={c}",
-              onclick=f"document.cookie='lang={c};path=/;max-age=31536000;samesite=lax';location.reload();return false;",
+              href=f"/set-lang?{urlencode({'lang': c, 'next': current_path})}", lang=c,
               cls="flex items-center gap-1 px-3 py-1.5 text-sm text-ink-muted hover:bg-bg-raised no-underline")
-            for c in SUPPORTED_LANGS]
+            for c in enabled_languages()]
     return Div(
         Button(LANG_META.get(lang, LANG_META["en"])["flag"], type="button",
                onclick="this.nextElementSibling.classList.toggle('hidden')",
@@ -504,8 +507,8 @@ def _lang_pill(lang: str):
         cls="relative")
 
 
-def _topbar(lang: str, role: str, investor, investors):
-    from app_routes._shared import _role_switcher, _investor_switcher
+def _topbar(lang: str, role: str, investor, investors, current_path: str):
+    from app_routes._shared import _investor_switcher
     right = _investor_switcher(investor, investors, lang) if role == "investor" else Span("", cls="hidden")
     return Div(
         Div(
@@ -517,13 +520,14 @@ def _topbar(lang: str, role: str, investor, investors):
         Div(A(t("nav_signin", lang), href="/login", cls="hidden sm:inline text-xs text-ink-muted hover:text-ink no-underline"),
             Span("/", cls="hidden sm:inline text-ink-dim text-xs"),
             A(t("nav_signout", lang), href="/logout", cls="hidden sm:inline text-xs text-ink-muted hover:text-ink no-underline mr-2"),
-            _role_switcher(role, lang), right, _lang_pill(lang),
+            Span(t(f"role_{role}", lang), cls="text-xs font-medium text-ink-muted"),
+            right, _lang_pill(lang, current_path),
             cls="flex items-center gap-3"),
         cls="ws-top")
 
 
 def _lang_of(lang: str) -> str:
-    return {"en": "en", "uz": "uz", "ru": "ru", "es": "es", "fr": "fr"}.get(lang, "en")
+    return lang if lang in LANG_META else DEFAULT_LANG
 
 
 def _pdf_pane():
@@ -542,9 +546,9 @@ def app_shell(title: str, *content, current_path: str = "/app", lang: str = DEFA
     """Render a Tool page inside the Agents+Tools cockpit (content in the center)."""
     from app_routes._shared import list_investors
     investors = investors if investors is not None else list_investors()
-    return Html(
+    return localize_tree(Html(
         Head(*_head(title, lang)),
-        Body(Div(_topbar(lang, role, investor, investors),
+        Body(Div(_topbar(lang, role, investor, investors, current_path),
                  _left_nav(role, current_path, lang),
                  Div(*content, cls="ws-center"),
                  Div(cls="ws-backdrop", onclick="wsToggleNav()"),
@@ -553,7 +557,7 @@ def app_shell(title: str, *content, current_path: str = "/app", lang: str = DEFA
              Script(NotStr(SHELL_JS)),
              cls="bg-bg text-ink font-sans antialiased", data_role=role,
              data_ai_name=t("nav_investor_ai", lang) if role == "investor" else "Factorio AI"),
-        lang=_lang_of(lang))
+        lang=_lang_of(lang)), lang)
 
 
 @rt("/app")
@@ -564,9 +568,9 @@ def app_home(req):
     role = current_role(req)
     investors = list_investors()
     investor = current_investor(req, investors) if role == "investor" else None
-    return Html(
+    return localize_tree(Html(
         Head(*_head(t("nav_investor_ai", lang) if role == "investor" else "Factorio AI", lang)),
-        Body(Div(_topbar(lang, role, investor, investors),
+        Body(Div(_topbar(lang, role, investor, investors, "/app"),
                  _left_nav(role, "/app", lang),
                  Div(_chat_center(lang, role), cls="ws-center"),
                  Div(cls="ws-backdrop", onclick="wsToggleNav()"),
@@ -575,7 +579,7 @@ def app_home(req):
              Script(NotStr(SHELL_JS)),
              cls="bg-bg text-ink font-sans antialiased", data_role=role,
              data_ai_name=t("nav_investor_ai", lang) if role == "investor" else "Factorio AI"),
-        lang=_lang_of(lang))
+        lang=_lang_of(lang)), lang)
 
 
 @rt("/app/chat/share", methods=["POST"])

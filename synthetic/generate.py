@@ -1,4 +1,4 @@
-"""Deterministic synthetic data generator for FactorFinance.
+"""Deterministic synthetic data generator for FastFactoring.
 
 Usage:
     python -m synthetic.generate                    # seed with default seed=42
@@ -374,7 +374,7 @@ def run(seed: int = 42, fresh: bool = False, limit: int | None = None) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate synthetic data for FactorFinance")
+    parser = argparse.ArgumentParser(description="Generate synthetic data for FastFactoring")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--fresh", action="store_true", help="Truncate before seeding")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of invoices")

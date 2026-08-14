@@ -134,7 +134,23 @@ def build_conversation(system_prompt: str, history: list[dict],
 
 # ── Assistant 1: loan / invoice-application triage (seller side) ────────────
 
-_LANG_NAMES = {"en": "English", "uz": "Uzbek", "ru": "Russian"}
+_LANG_NAMES = {
+    "en": "English",
+    "et": "Estonian",
+    "de": "German",
+    "fr": "French",
+    "sv": "Swedish",
+    "lv": "Latvian",
+    "no": "Norwegian",
+    "da": "Danish",
+    "pl": "Polish",
+    "nl": "Dutch",
+    "fi": "Finnish",
+    "lt": "Lithuanian",
+    # Retained for installations that explicitly enable the legacy catalogues.
+    "ru": "Russian",
+    "uz": "Uzbek",
+}
 
 
 def language_directive(lang: str) -> str:

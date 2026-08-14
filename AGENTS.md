@@ -2,11 +2,13 @@
 
 ## Project Structure & Module Organization
 
-`main.py` starts the server; `app.py` creates the shared FastHTML application and imports route modules for registration. Marketing pages and reusable page components live in `landing/`, while authenticated product screens live in `app_routes/`. Database schema, connection helpers, and migrations are under `db/`; deterministic demo-data generators are in `synthetic/`. Put configuration and shared helpers in `utils/`. Documentation generators belong in `scripts/`, generated documentation in `docs/`, screenshots in `screenshots/`, and served assets in `static/`.
+`main.py` starts the server; `app.py` creates the shared FastHTML application and imports route modules for registration. Marketing pages and reusable components live in `landing/`, while authenticated product screens live in `app_routes/`. Import every new route module at the bottom of `app.py` so its decorators register.
 
-When adding a route module, import it at the bottom of `app.py`; otherwise its decorators will not register.
+Database schema, connections, and migrations are under `db/`; fully qualify PostgreSQL objects as `factorio.*`. Put deterministic demo-data generators in `synthetic/`, shared configuration and helpers in `utils/`, documentation generators in `scripts/`, generated documentation in `docs/`, screenshots in `screenshots/`, and served assets in `static/`.
 
-## Build, Run, and Development Commands
+Framework-agnostic GTM and outreach skills live in `agents/skills/`. Keep their `SKILL.md`, references, and deterministic scripts portable; vendor-specific discovery manifests belong outside this repository.
+
+## Build, Test, and Development Commands
 
 Create and activate a virtual environment before running:
 
@@ -15,30 +17,26 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 python -m db.migrate
-python -m synthetic.generate --seed 42
+python -m synthetic.generate --seed 42 --limit 5
 PORT=5055 python main.py
 ```
 
-Use `python -m synthetic.generate --seed 42 --fresh` to rebuild demo data; it truncates seeded records. `python -m db.migrate --drop` is destructive and should be used only intentionally. `docker compose up --build` runs the complete local container setup.
+Use `python -m synthetic.generate --seed 42 --fresh` to replace demo data; it is destructive. `python -m db.migrate --drop` is also destructive and should be used only intentionally. `docker compose up --build` runs the complete local container setup. Configure `DB_URL` locally or `DATABASE_URL_PROD` for the production migration tool.
 
 ## Coding Style & Naming Conventions
 
-Follow existing Python style: four-space indentation, type hints where they clarify interfaces, `snake_case` for functions and modules, and `UPPER_CASE` for constants. Keep route handlers small and extract shared UI into component helpers. Fully qualify PostgreSQL objects as `factorio.*`. Read environment values through `utils.config.settings()`.
+Follow existing Python style: four-space indentation, useful type hints, module docstrings, `snake_case` functions/modules, and `UPPER_SNAKE_CASE` constants. Keep routes thin and extract shared behavior into `utils/`, components, or `app_routes/_shared.py`. Read environment values through `utils.config.settings()`.
 
-All visible copy must use `t(key, lang)` and provide English, Uzbek, and Russian entries in `utils/i18n.py`. Use `fmt_uzs()` for monetary UI and `NotStr()` for intentional raw HTML/entities.
+Use `t(key, lang)` for keyed copy, run the i18n inventory after visible-copy changes, format monetary UI through `utils.money`, and wrap intentional raw HTML/entities with `NotStr()`. Russian and Uzbek catalogues remain in source for compatibility but are disabled by default.
 
 ## Testing Guidelines
 
-No automated test suite or coverage threshold is currently committed. Before submitting, run the app, exercise affected routes, and verify database-backed flows against seeded data. For UI changes, check all three languages and relevant responsive layouts. Regenerate screenshots or documents with the matching script in `scripts/` when generated assets are affected.
+Run `python -m unittest discover -s tests -v` and `python -m scripts.update_i18n`. Then migrate, seed a small dataset, and smoke-test affected language and role variants. For data-layer changes, verify both a clean migration and an idempotent rerun. Name tests `tests/test_<area>.py` and functions `test_<behavior>`. Regenerate screenshots or documents with their matching scripts when generated assets change.
 
 ## Commit & Pull Request Guidelines
 
-Recent commits use concise, imperative, scope-led subjects, such as `mobile: left nav becomes a slide-in drawer` and `docs(ru): user guide parity`. Keep each commit focused. Pull requests should explain behavior changes, migration or configuration impact, and manual verification performed; link related issues and include before/after screenshots for visible UI changes. Never commit `.env`, credentials, or production data.
+Recent commits use concise, imperative, scope-led subjects, such as `mobile: left nav becomes a slide-in drawer` and `docs(ru): user guide parity`. Keep each commit focused. PRs should explain behavior, migration/configuration impact, and verification; link related issues and include before/after screenshots for visible UI changes. Never commit `.env`, credentials, or production data.
 
 ## Release Versioning
 
-`VERSION` is the release source of truth. For release-significant commits, use
-`skills/factorio-version-release/SKILL.md` to choose the Semantic Versioning
-bump and prepend the matching entry to `docs/change_log.md` in the same commit.
-Do not bump for intermediate commits, generated screenshots, formatting, tests,
-or archive-only changes unless they are intentionally released.
+`VERSION` is the release source of truth. For release-significant commits, use `skills/factorio-version-release/SKILL.md` to choose the Semantic Versioning bump and prepend the matching entry to `docs/change_log.md` in the same commit. Do not bump for intermediate commits, generated screenshots, formatting, tests, or archive-only changes unless they are intentionally released.

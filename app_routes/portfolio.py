@@ -1,8 +1,8 @@
 """Portfolio route: /app/portfolio — investor reporting cockpit.
 
-Modelled on investly.co's Overview: net-return and account-value hero panels,
-an investments-by-status aging table, a debtor payment-habits table, and an
-enriched positions table (realized returns + settlement date).
+Provides net-return and account-value hero panels, an investments-by-status
+aging table, a debtor payment-habits table, and an enriched positions table
+(realized returns + settlement date).
 """
 
 from __future__ import annotations

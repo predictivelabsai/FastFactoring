@@ -202,7 +202,7 @@ Factorio is an invoice-financing (factoring) marketplace. Businesses sell their 
 - Configure automated bidding: minimum risk grade, maximum amount per invoice and preferred sectors.
 - Toggle the strategy active/inactive; the status is shown at the top.
 - Rules are saved per investor and applied to matching new invoices.
-- Modelled on investly.co's autobidder.
+- Based on configurable portfolio limits and diversification rules.
 
 ---
 

@@ -1,6 +1,6 @@
-"""Generate a FactorFinance product tour PDF from the demo screenshots.
+"""Generate a Factorio reference-product tour PDF from demo screenshots.
 
-Output: docs/factorio-product-tour.pdf
+Output: docs/fastfactoring-reference-product-tour.pdf
 
 Slide-deck format (landscape, 16:9).
 
@@ -26,7 +26,7 @@ from reportlab.platypus import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SHOTS = ROOT / "screenshots"
-OUT = ROOT / "docs" / "factorio-product-tour.pdf"
+OUT = ROOT / "docs" / "fastfactoring-reference-product-tour.pdf"
 
 SLIDE = (33.87 * cm, 19.05 * cm)
 
@@ -82,7 +82,7 @@ def _footer(canvas, doc):
     canvas.line(1.5 * cm, 1 * cm, SLIDE[0] - 1.5 * cm, 1 * cm)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(INK_DIM)
-    canvas.drawString(1.5 * cm, 0.55 * cm, "FactorFinance — Invoice financing for growing businesses")
+    canvas.drawString(1.5 * cm, 0.55 * cm, "Factorio — powered by open-source FastFactoring")
     canvas.drawRightString(SLIDE[0] - 1.5 * cm, 0.55 * cm, f"{doc.page}")
     canvas.restoreState()
 
@@ -100,7 +100,7 @@ def _slide_frame(doc):
 def _hero_slide(styles):
     return [
         Spacer(1, 40 * mm),
-        Paragraph("FactorFinance", styles["hero"]),
+        Paragraph("Factorio", styles["hero"]),
         Paragraph("Invoice financing for growing businesses.", styles["hero_sub"]),
         Paragraph("Submit invoices · Get funded in days · Grow faster", styles["hero_sub"]),
         PageBreak(),
@@ -210,7 +210,7 @@ def build() -> None:
         str(OUT), pagesize=SLIDE,
         leftMargin=1.2 * cm, rightMargin=1.2 * cm,
         topMargin=1 * cm, bottomMargin=1.5 * cm,
-        title="FactorFinance — Product Tour",
+        title="Factorio — FastFactoring Reference Product Tour",
         author="Predictive Labs",
     )
     doc.addPageTemplates([PageTemplate(id="slide", frames=[_slide_frame(doc)], onPage=_footer)])
@@ -228,10 +228,10 @@ def build() -> None:
             "Hero with key stats: 85% advance rate, 1–3 day turnaround, 5 sectors supported, 3 languages.",
             "Four-step process: Submit → Verify → Fund → Settle.",
             "Sector-specific cards for manufacturing, wholesale, construction, logistics, services.",
-            "Trilingual: English, O’zbekcha, Russian — switch with one click in the navbar.",
+            "Twelve enabled languages with administrator-controlled availability.",
         ],
         screenshot="01-home-en.png",
-        caption="FactorFinance homepage (English)",
+        caption="Factorio reference-product homepage (English)",
     )
     story += _slide(
         styles,

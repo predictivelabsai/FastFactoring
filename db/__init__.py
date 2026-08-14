@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def pool() -> ConnectionPool:
-    url = settings().db_url
+    url = settings().database_url
     if not url:
-        raise RuntimeError("DB_URL is not set")
+        raise RuntimeError("DATABASE_URL_PROD or DB_URL is not set")
     p = ConnectionPool(conninfo=url, min_size=1, max_size=8, open=False)
     p.open()
     return p

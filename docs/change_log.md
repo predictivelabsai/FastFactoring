@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-08-14 — v1.1.0
+
+- Repositioned FastFactoring as the open-source platform while keeping Factorio as the standalone reference demo and application brand.
+- Added admin-controlled availability for 12 production languages, with Russian and Uzbek retained but disabled by default, and refreshed 562 UI strings in every active catalogue.
+- Added four-role RBAC, the single named administrator, test-admin authentication, Google SSO, and admin-controlled EUR, GBP, or USD display currency.
+- Added DATABASE_URL_PROD migration tooling and a documented synthetic-data migration and verification plan; production migration remains an explicit operator action.
+- Added a sourced multi-country GTM plan plus framework-agnostic prospecting and guarded-outreach skills under agents/skills; live outreach remains blocked pending sender and transactional suppression controls.
+
 ## 2026-07-27 — v1.0.0
 
 - Established the Factorio AI Platform Demo as the initial versioned baseline.

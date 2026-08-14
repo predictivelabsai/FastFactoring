@@ -1,9 +1,8 @@
-"""Back-office admin console + role-scoped pages (demo-grade RBAC).
+"""Back-office admin console + role-scoped pages.
 
-Roles: investor / seller / payer / admin. Admin has sub-roles (ops, credit,
-collections, finance, compliance, exec, super) that scope actions — e.g.
-**segregation of duties**: only Finance / Super may release funding, and only
-Credit / Compliance / Super may set limits.
+RBAC roles are investor, supplier, payer, and admin. The single admin role has
+full back-office authority; legacy subrole checks resolve to ``super`` only for
+the authenticated sole-admin identity.
 
 Every state-changing action is written to an **audit log**
 (`factorio.audit_log`, created lazily). This is a demo: actions log and confirm
@@ -23,9 +22,7 @@ from starlette.responses import RedirectResponse
 from app import rt
 from utils.i18n import t, get_lang
 from landing.components import Eyebrow, Heading, Section_
-from app_routes._shared import (
-    app_page, fmt_uzs, current_role, current_subrole, ADMIN_SUBROLES,
-)
+from app_routes._shared import app_page, fmt_uzs, current_role, current_subrole
 
 try:
     from db import fetch_all, fetch_one, execute

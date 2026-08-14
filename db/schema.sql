@@ -1,4 +1,4 @@
--- FactorFinance schema — invoice financing platform
+-- FastFactoring schema — open-source invoice financing platform
 -- All tables live in the factorio.* schema.
 
 CREATE SCHEMA IF NOT EXISTS factorio;
@@ -245,8 +245,16 @@ CREATE TABLE IF NOT EXISTS factorio.invoice_assignments (
 CREATE TABLE IF NOT EXISTS factorio.app_users (
     email TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '',
     salt TEXT NOT NULL, pw_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'investor', subrole TEXT NOT NULL DEFAULT 'ops',
+    role TEXT NOT NULL DEFAULT 'investor'
+        CHECK (role IN ('investor', 'payer', 'supplier', 'admin')),
+    subrole TEXT NOT NULL DEFAULT 'ops',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Shared application settings (language availability, agent kill switch, etc.).
+CREATE TABLE IF NOT EXISTS factorio.kv (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
 );
 
 -- ── Collections (back office) ──────────────────────────────────────────────

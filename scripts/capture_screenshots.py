@@ -1,7 +1,7 @@
-"""Capture a tour of the FactorFinance app into ./screenshots.
+"""Capture a tour of the Factorio reference app into ./screenshots.
 
 Drives a real browser via Playwright against a locally-running
-FactorFinance server (default http://localhost:5055). Produces a
+Factorio/FastFactoring server (default http://localhost:5055). Produces a
 deterministic set of frames for make_gif.py and make_pdf.py.
 
 Usage:
@@ -25,14 +25,10 @@ SHOTS = ROOT / "screenshots"
 BASE_URL = os.environ.get("FF_URL", "http://localhost:5055")
 VIEWPORT = {"width": 1440, "height": 900}
 
-LANGS = [
-    ("en", []),
-    ("uz", []),
-    ("ru", []),
-]
+ACTIVE_LANGS = ("en", "et", "de", "fr", "sv", "lv", "no", "da", "pl", "nl", "fi", "lt")
 
 TOUR_EN = [
-    ("01-home-en.png",              "/",                    True),
+    ("01-home-en.png",              "/factorio",            True),
     ("02-for-sellers-en.png",       "/for-sellers",         True),
     ("03-for-investors-en.png",     "/for-investors",       True),
     ("04-how-it-works-en.png",      "/how-it-works",        True),
@@ -44,21 +40,8 @@ TOUR_EN = [
     ("10-portfolio-en.png",         "/app/portfolio",       True),
 ]
 
-TOUR_UZ = [
-    ("11-home-uz.png",              "/",                    True),
-    ("12-marketplace-uz.png",       "/app/marketplace",     True),
-]
-
-TOUR_RU = [
-    ("13-home-ru.png",              "/",                    True),
-    ("14-marketplace-ru.png",       "/app/marketplace",     True),
-]
-
-
 def _set_lang(page, lang: str) -> None:
-    page.evaluate(
-        f"document.cookie='lang={lang};path=/;max-age=31536000;samesite=lax'"
-    )
+    page.goto(f"{BASE_URL}/set-lang?lang={lang}&next=/factorio", wait_until="load")
 
 
 def _find_first_invest_link(page) -> str | None:
@@ -79,7 +62,16 @@ def main() -> None:
         ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=1)
         page = ctx.new_page()
 
-        for lang, tour in [("en", TOUR_EN), ("uz", TOUR_UZ), ("ru", TOUR_RU)]:
+        # Establish the same authenticated investor session users get from the
+        # landing-page sign-in flow before capturing product routes.
+        page.goto(BASE_URL + "/login/demo?who=investor", wait_until="load")
+
+        tours = [("en", TOUR_EN)] + [
+            (lang, [(f"locale-{lang}-home.png", "/factorio", True),
+                    (f"locale-{lang}-marketplace.png", "/app/marketplace", True)])
+            for lang in ACTIVE_LANGS[1:]
+        ]
+        for lang, tour in tours:
             _set_lang(page, lang)
 
             for fname, path, full_page in tour:

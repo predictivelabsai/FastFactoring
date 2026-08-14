@@ -1,6 +1,8 @@
-"""Landing-page components for Factorio — i18n-aware (EN / UZ / RU)."""
+"""Landing-page components for Factorio's configurable multilingual surface."""
 
 from __future__ import annotations
+
+from urllib.parse import quote, urlencode
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, NotStr,
@@ -9,10 +11,16 @@ from fasthtml.common import (
     Select, Option,
 )
 
-from utils.i18n import t, LANG_META, SUPPORTED_LANGS, DEFAULT_LANG
+from utils.i18n import (
+    DEFAULT_LANG, LANG_META, enabled_languages, localize_tree, t,
+)
 
 SITE_NAME = "Factorio"
 CONTACT_EMAIL = "hello@factorio.co.uk"
+FAVICON = "data:image/svg+xml," + quote(
+    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#1F5D43"/><path fill="white" d="M8 7h16v5H14v4h9v5h-9v6H8Z"/></svg>""",
+    safe="",
+)
 
 SECTOR_ICONS = {
     "manufacturing": "&#9881;",
@@ -87,18 +95,18 @@ def Pill(text: str, *, cls: str = ""):
     )
 
 
-def _lang_switcher(current_lang: str):
+def _lang_switcher(current_lang: str, current_path: str = "/"):
     """Flag dropdown (kanvas/pehero pattern): a button showing the current flag,
     opening a menu of flag + native-name options. Defaults to English (GB flag)."""
     current = LANG_META.get(current_lang, LANG_META["en"])
     options = []
-    for code in SUPPORTED_LANGS:
+    for code in enabled_languages():
         meta = LANG_META[code]
         active_cls = " font-semibold text-ink" if code == current_lang else ""
         options.append(
             A(Span(meta["flag"], cls="mr-2"), Span(meta["name"], cls="text-xs"),
-              href=f"/set-lang?lang={code}",
-              onclick=f"document.cookie='lang={code};path=/;max-age=31536000;samesite=lax';location.reload();return false;",
+              href=f"/set-lang?{urlencode({'lang': code, 'next': current_path})}",
+              lang=code,
               cls=("flex items-center gap-1 px-3 py-1.5 text-sm text-ink-muted "
                    "hover:bg-bg-raised hover:text-ink transition-colors no-underline" + active_cls))
         )
@@ -127,6 +135,10 @@ def _navbar(current_path: str = "/", lang: str = DEFAULT_LANG):
              cls=f"text-sm text-ink-muted hover:text-ink transition-colors {'text-ink font-medium' if current_path == href else ''}"))
         for key, href in nav_keys
     ]
+    items.append(
+        Li(A("Demo", href="https://factorio.co.uk/",
+             cls="text-sm text-ink-muted hover:text-ink transition-colors"))
+    )
     return Nav(
         Div(
             A(
@@ -137,10 +149,10 @@ def _navbar(current_path: str = "/", lang: str = DEFAULT_LANG):
             ),
             Ul(*items, cls="hidden lg:flex items-center gap-7"),
             Div(
-                _lang_switcher(lang),
+                _lang_switcher(lang, current_path),
                 A(t("nav_get_quote", lang), href="/contact",
                   cls="hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-ink border border-line-bright hover:border-accent hover:text-accent transition-colors"),
-                A(t("nav_login", lang), href="/app",
+                A(t("nav_login", lang), href="/login",
                   cls="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-accent text-bg hover:bg-ink transition-colors"),
                 cls="flex items-center gap-3",
             ),
@@ -159,6 +171,8 @@ def _footer(lang: str = DEFAULT_LANG):
                       href="/", cls="flex items-center text-lg mb-4"),
                     P(t("footer_tagline", lang), cls="text-ink-muted text-sm max-w-xs mb-5"),
                     P(t("footer_built_by", lang), cls="text-ink-dim text-xs leading-relaxed max-w-xs"),
+                    A("Open-source FastFactoring project →", href="/fastfactoring",
+                      cls="inline-block mt-4 text-accent text-xs hover:text-ink"),
                 ),
                 Div(
                     H4(t("footer_product", lang), cls="text-xs font-mono tracking-[0.18em] uppercase text-ink-muted mb-5"),
@@ -195,7 +209,6 @@ def _footer(lang: str = DEFAULT_LANG):
 
 def page(title: str, *content, current_path: str = "/", lang: str = DEFAULT_LANG, head_extra=None):
     tagline = t("footer_tagline", lang)
-    html_lang = {"en": "en", "uz": "uz", "ru": "ru"}.get(lang, "en")
     head_children = [
         Meta(charset="utf-8"),
         Meta(name="viewport", content="width=device-width, initial-scale=1"),
@@ -216,7 +229,7 @@ def page(title: str, *content, current_path: str = "/", lang: str = DEFAULT_LANG
     if head_extra:
         head_children.extend(head_extra if isinstance(head_extra, list) else [head_extra])
 
-    return Html(
+    return localize_tree(Html(
         Head(*head_children),
         Body(
             _navbar(current_path, lang=lang),
@@ -224,8 +237,8 @@ def page(title: str, *content, current_path: str = "/", lang: str = DEFAULT_LANG
             _footer(lang=lang),
             cls="bg-bg text-ink font-sans antialiased",
         ),
-        lang=html_lang,
-    )
+        lang=lang,
+    ), lang)
 
 
 # ---- Higher-level blocks ------------------------------------------------
@@ -271,7 +284,7 @@ def Hero(lang: str = DEFAULT_LANG):
                 _StatCell("1–3 " + ("kun" if lang == "uz" else "дня" if lang == "ru" else "days"),
                           t("stat_days", lang)),
                 _StatCell("10", t("stat_sectors", lang)),
-                _StatCell("5", t("stat_total", lang)),
+                _StatCell(str(len(enabled_languages())), t("stat_total", lang)),
                 cls="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 grid grid-cols-2 md:grid-cols-4 gap-6",
             ),
             cls="border-y border-line bg-bg-elevated/60",
@@ -293,7 +306,7 @@ def ProductPreview(lang: str = DEFAULT_LANG):
                 cls="text-center",
             ),
             Div(
-                Img(src="/docs/factorio-home.gif",
+                Img(src="/docs/fastfactoring-reference-home.gif",
                     alt="Factorio product tour",
                     loading="lazy",
                     cls="w-full h-auto block"),

@@ -1,7 +1,7 @@
 # Role Guides & Back-Office — Plan and Status
 
 The user guide is a **single document with four persona parts** (EN:
-`factorio_user_guide.md`, RU: `factorio_user_guide_ru.md`), each part on its own
+`fastfactoring_user_guide.md`, retained RU: `fastfactoring_user_guide_ru.md`), each part on its own
 page behind a coloured separator, with screenshots from the live left-nav
 cockpit. (The earlier per-role split files were retired in favour of this.)
 

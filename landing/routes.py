@@ -12,11 +12,10 @@ from landing.components import (
     page, Hero, ProductPreview, HowItWorks, SectorCards, SectorExplorer, BenefitsStrip, CTASection,
     Eyebrow, Heading, Body_, Button_, Pill, Section_, SITE_NAME,
 )
+from landing.fastfactoring import landing_page as fastfactoring_landing
 
 
-@rt("/")
-def home(req):
-    lang = get_lang(req)
+def _factorio_home(lang: str):
     return page(
         t("hero_eyebrow", lang),
         Hero(lang=lang),
@@ -29,6 +28,28 @@ def home(req):
         current_path="/",
         lang=lang,
     )
+
+
+@rt("/")
+def home(req):
+    lang = get_lang(req)
+    host = req.headers.get("host", "").split(":", 1)[0].lower()
+    # The production reference implementation remains Factorio-branded. Local,
+    # preview, and future FastFactoring hosts present the open-source product.
+    if host in {"factorio.co.uk", "www.factorio.co.uk"}:
+        return _factorio_home(lang)
+    return fastfactoring_landing(lang)
+
+
+@rt("/fastfactoring")
+def fastfactoring(req):
+    return fastfactoring_landing(get_lang(req))
+
+
+@rt("/factorio")
+def factorio_reference(req):
+    """Stable local route for reference-product capture and review."""
+    return _factorio_home(get_lang(req))
 
 
 @rt("/for-sellers")

@@ -19,7 +19,7 @@ SCHEMA_FILES = ["schema.sql"]
 
 
 def _apply(sql: str) -> None:
-    with psycopg.connect(settings().db_url, autocommit=True) as conn:
+    with psycopg.connect(settings().database_url, autocommit=True) as conn:
         conn.execute(sql)
 
 
@@ -38,7 +38,7 @@ def migrate(drop: bool = False) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run FactorFinance DB migrations")
+    parser = argparse.ArgumentParser(description="Run FastFactoring DB migrations")
     parser.add_argument("--drop", action="store_true", help="Drop and recreate schema (DESTRUCTIVE)")
     args = parser.parse_args()
     migrate(drop=args.drop)

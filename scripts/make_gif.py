@@ -16,8 +16,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 SHOTS = ROOT / "screenshots"
 IMG = ROOT / "docs" / "img"
-OUT_GIF = ROOT / "docs" / "factorio.gif"
-OUT_HOME = ROOT / "docs" / "factorio-home.gif"
+OUT_GIF = ROOT / "docs" / "fastfactoring-reference.gif"
+OUT_HOME = ROOT / "docs" / "fastfactoring-reference-home.gif"
 
 FRAMES = [
     ("01-home-en.png",              2800),
@@ -25,10 +25,9 @@ FRAMES = [
     ("08-marketplace-en.png",       3200),
     ("09-marketplace-detail-en.png", 3200),
     ("10-portfolio-en.png",         3200),
-    ("11-home-uz.png",              2800),
-    ("12-marketplace-uz.png",       2800),
-    ("13-home-ru.png",              2800),
-    ("14-marketplace-ru.png",       2800),
+    ("locale-et-home.png",          2800),
+    ("locale-de-marketplace.png",   2800),
+    ("locale-fr-home.png",          2800),
 ]
 
 # Home-page hero tour — the SAME role screenshots the user guide uses

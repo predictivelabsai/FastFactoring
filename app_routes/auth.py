@@ -1,9 +1,9 @@
 """Real authentication — production (step 8).
 
 Session-based login with PBKDF2-hashed passwords over an ``app_users`` table.
-Layered so the demo is not broken: if a user is **logged in**, the session's
-role/subrole win; otherwise the app falls back to the cookie role-switcher used
-for demos. MFA/SSO are stubbed (documented as the next hardening step).
+RBAC has exactly four roles: investor, payer, supplier, and admin. The sole
+admin identity is ``kaljuvee@gmail.com``; Google SSO can map that identity to
+the same role later without changing authorization rules.
 
 Passwords use stdlib ``hashlib.pbkdf2_hmac`` — no extra dependency.
 """
@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import os
+from urllib.parse import quote_plus
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, NotStr,
@@ -23,6 +24,9 @@ from starlette.responses import RedirectResponse
 
 from app import rt
 from landing.components import TAILWIND_CONFIG, SITE_NAME
+from utils.config import settings
+from utils import google_auth
+from utils.i18n import get_lang, localize_tree
 
 try:
     from db import fetch_all, fetch_one, execute
@@ -30,13 +34,11 @@ try:
 except Exception:  # pragma: no cover
     _HAS_DB = False
 
-# Demo users seeded on first use (password "demo1234" for all).
+# Demo users seeded on first use (password "demo1234" for all). Admin is never
+# exposed through the shared demo password or one-click sign-in.
+ADMIN_EMAIL = "kaljuvee@gmail.com"
+ROLES = frozenset({"investor", "payer", "supplier", "admin"})
 DEMO_USERS = [
-    ("admin@factorio.co.uk", "Super Admin", "admin", "super"),
-    ("finance@factorio.co.uk", "Finance Officer", "admin", "finance"),
-    ("credit@factorio.co.uk", "Credit Analyst", "admin", "credit"),
-    ("compliance@factorio.co.uk", "Compliance Officer", "admin", "compliance"),
-    ("collections@factorio.co.uk", "Collections Agent", "admin", "collections"),
     ("investor@factorio.co.uk", "Investor", "investor", "ops"),
     ("supplier@factorio.co.uk", "Supplier", "supplier", "ops"),
     ("payer@factorio.co.uk", "Payer", "payer", "ops"),
@@ -49,14 +51,12 @@ DEMO_SESSION = {
     "investor": ("investor@factorio.co.uk", "Investor", "investor", "ops"),
     "supplier": ("supplier@factorio.co.uk", "Supplier", "supplier", "ops"),
     "payer":    ("payer@factorio.co.uk",    "Payer",    "payer",    "ops"),
-    "admin":    ("admin@factorio.co.uk",    "Super Admin", "admin", "super"),
 }
 # Display order + one-line descriptions for the login-page choice card.
 DEMO_CHOICES = [
     ("investor", "Investor", "Fund invoices, track a portfolio"),
     ("supplier", "Supplier", "Sell invoices for cash today"),
     ("payer",    "Payer",    "Confirm invoices you owe"),
-    ("admin",    "Admin",    "Back office — full access"),
 ]
 
 # Small shield-check glyph for the demo-accounts card header.
@@ -98,6 +98,10 @@ def seed_users() -> int:
     _ensure()
     if not _HAS_DB:
         return 0
+    # Existing installations may contain the former demo admin accounts. Keep
+    # their rows for audit continuity but remove administrative authority.
+    execute("UPDATE factorio.app_users SET role='investor', subrole='ops' "
+            "WHERE role='admin' AND lower(email)<>%(email)s", {"email": ADMIN_EMAIL})
     n = 0
     for email, name, role, subrole in DEMO_USERS:
         if fetch_one("SELECT 1 FROM factorio.app_users WHERE email=%(e)s", {"e": email}):
@@ -107,6 +111,22 @@ def seed_users() -> int:
                 "VALUES (%(e)s,%(n)s,%(s)s,%(h)s,%(r)s,%(sr)s)",
                 {"e": email, "n": name, "s": salt, "h": h, "r": role, "sr": subrole})
         n += 1
+    admin_password = settings().admin_password
+    if admin_password:
+        admin = fetch_one("SELECT * FROM factorio.app_users WHERE email=%(e)s", {"e": ADMIN_EMAIL})
+        if not admin or not _verify(admin_password, admin["salt"], admin["pw_hash"]):
+            salt, password_hash = _hash(admin_password)
+            execute(
+                "INSERT INTO factorio.app_users (email,name,salt,pw_hash,role,subrole) "
+                "VALUES (%(e)s,'Julian Kaljuvee',%(s)s,%(h)s,'admin','super') "
+                "ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name,salt=EXCLUDED.salt,"
+                "pw_hash=EXCLUDED.pw_hash,role='admin',subrole='super'",
+                {"e": ADMIN_EMAIL, "s": salt, "h": password_hash},
+            )
+            n += 1
+        elif admin["role"] != "admin" or admin["subrole"] != "super":
+            execute("UPDATE factorio.app_users SET role='admin',subrole='super' WHERE email=%(e)s",
+                    {"e": ADMIN_EMAIL})
     return n
 
 
@@ -114,9 +134,18 @@ def current_user(req):
     """Return the logged-in user dict from the session, or None."""
     s = getattr(req, "session", None)
     if s and s.get("uid"):
-        return {"email": s.get("uid"), "name": s.get("name", ""),
-                "role": s.get("role"), "subrole": s.get("subrole", "ops")}
+        email = str(s.get("uid", "")).lower()
+        role = s.get("role") if s.get("role") in ROLES else "investor"
+        role = "admin" if email == ADMIN_EMAIL and role == "admin" else (
+            "investor" if role == "admin" else role
+        )
+        return {"email": email, "name": s.get("name", ""), "role": role}
     return None
+
+
+def is_admin(req) -> bool:
+    user = current_user(req)
+    return bool(user and user["email"] == ADMIN_EMAIL and user["role"] == "admin")
 
 
 # ── Login / logout ─────────────────────────────────────────────────────────
@@ -136,7 +165,7 @@ def _demo_row(who: str, email: str, label: str, desc: str):
     )
 
 
-def _login_page(error: str = "", email: str = ""):
+def _login_page(error: str = "", email: str = "", lang: str = "en"):
     field = "w-full mt-1 px-4 py-2.5 rounded-xl border border-line-bright bg-bg-elevated text-ink focus:outline-none focus:border-accent"
 
     brand = Div(
@@ -160,8 +189,7 @@ def _login_page(error: str = "", email: str = ""):
             cls="flex items-center gap-2 mb-3"),
         Div(*[_demo_row(who, DEMO_SESSION[who][0], label, desc)
               for who, label, desc in DEMO_CHOICES], cls="flex flex-col gap-2"),
-        P(NotStr("One-click sign-in — no password needed. Or use the form above "
-                 "(password <b>demo1234</b>)."),
+        P("Choose an investor, supplier, or payer role to enter the synthetic demo instantly.",
           cls="text-ink-dim text-xs mt-3 leading-relaxed"),
         cls="mt-8 p-5 rounded-2xl border border-line bg-bg-raised/40",
     )
@@ -180,12 +208,15 @@ def _login_page(error: str = "", email: str = ""):
                 Button("Sign in", type="submit",
                        cls="w-full mt-6 px-5 py-2.5 rounded-full bg-accent text-bg font-medium hover:bg-ink transition-colors"),
                 method="post", action="/login"),
+            A("Continue with Google", href="/auth/google",
+              cls="block w-full mt-3 px-5 py-2.5 rounded-full border border-line-bright "
+                  "text-center text-ink text-sm font-medium hover:border-accent no-underline"),
             demo_card,
             cls="w-full max-w-sm"),
         cls="flex-1 flex items-center justify-center p-6 bg-bg",
     )
 
-    return Html(
+    return localize_tree(Html(
         Head(Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1"),
              Title(f"Sign in · {SITE_NAME}"),
              Link(rel="icon", type="image/svg+xml", href="/static/favicon.svg"),
@@ -193,14 +224,14 @@ def _login_page(error: str = "", email: str = ""):
              Script(src="https://cdn.tailwindcss.com"), Script(NotStr(TAILWIND_CONFIG)),
              Link(rel="stylesheet", href="/static/site.css")),
         Body(Div(brand, form_panel, cls="min-h-screen flex"),
-             cls="bg-bg text-ink font-sans antialiased"))
+             cls="bg-bg text-ink font-sans antialiased"), lang=lang), lang)
 
 
 @rt("/login", methods=["GET"])
-def login_get(req):
+def login_get(req, error: str = ""):
     if current_user(req):
         return RedirectResponse("/app", status_code=303)
-    return _login_page()
+    return _login_page(error=error, lang=get_lang(req))
 
 
 @rt("/login", methods=["POST"])
@@ -209,9 +240,12 @@ def login_post(req, email: str = "", password: str = ""):
     email = (email or "").strip().lower()
     u = fetch_one("SELECT * FROM factorio.app_users WHERE email=%(e)s", {"e": email}) if _HAS_DB else None
     if not u or not _verify(password, u["salt"], u["pw_hash"]):
-        return _login_page("Invalid email or password.", email)
+        return _login_page("Invalid email or password.", email, get_lang(req))
     s = req.session
-    s["uid"] = u["email"]; s["name"] = u["name"]; s["role"] = u["role"]; s["subrole"] = u["subrole"]
+    role = u["role"] if u["role"] in ROLES else "investor"
+    if role == "admin" and email != ADMIN_EMAIL:
+        role = "investor"
+    s["uid"] = u["email"]; s["name"] = u["name"]; s["role"] = role
     dest = "/app"
     return RedirectResponse(dest, status_code=303)
 
@@ -223,11 +257,46 @@ def login_demo(req, who: str = ""):
     choice = DEMO_SESSION.get(who)
     if not choice:
         return RedirectResponse("/login", status_code=303)
-    email, name, role, subrole = choice
+    email, name, role, _subrole = choice
     s = req.session
-    s["uid"] = email; s["name"] = name; s["role"] = role; s["subrole"] = subrole
+    s["uid"] = email; s["name"] = name; s["role"] = role
     dest = "/app"
     return RedirectResponse(dest, status_code=303)
+
+
+@rt("/auth/google")
+def google_start(req):
+    if not google_auth.enabled():
+        return RedirectResponse("/login?error=" + quote_plus("Google sign-in is not configured."),
+                                status_code=303)
+    state = google_auth.new_state()
+    req.session["google_oauth_state"] = state
+    return RedirectResponse(google_auth.authorize_url(req, state), status_code=303)
+
+
+@rt("/auth/google/callback")
+def google_callback(req, code: str = "", state: str = "", error: str = ""):
+    expected = str(req.session.pop("google_oauth_state", ""))
+    if error or not code or not state or not expected or not hmac.compare_digest(state, expected):
+        return RedirectResponse("/login?error=" + quote_plus("Google sign-in failed."), status_code=303)
+    identity = google_auth.exchange(req, code)
+    if not identity:
+        return RedirectResponse("/login?error=" + quote_plus("Google account is not authorised."),
+                                status_code=303)
+    email = identity["email"]
+    role = "admin" if email == ADMIN_EMAIL else "investor"
+    if _HAS_DB and role != "admin":
+        try:
+            row = fetch_one("SELECT role FROM factorio.app_users WHERE lower(email)=%(e)s", {"e": email})
+            candidate = (row or {}).get("role")
+            if candidate in ROLES and candidate != "admin":
+                role = candidate
+        except Exception:
+            pass
+    req.session["uid"] = email
+    req.session["name"] = identity["name"]
+    req.session["role"] = role
+    return RedirectResponse("/app", status_code=303)
 
 
 @rt("/logout")

@@ -1,23 +1,29 @@
-# Factorio
+# FastFactoring
 
-**Invoice financing (factoring) platform.** Factorio connects businesses that need
-cash flow now with investors seeking short-term, asset-backed returns: sellers upload
-unpaid invoices, investors fund them on a marketplace, and returns settle when the
-invoice is paid.
+**FastFactoring** is an open-source invoice-financing platform built with FastHTML,
+HTMX, and PostgreSQL. It gives product teams an auditable foundation for supplier
+onboarding, invoice verification, funding, servicing, collections, settlement, and
+role-specific operations without a proprietary JavaScript application stack.
+
+**Factorio** is the standalone reference product shipped from this repository. The
+live demo at [factorio.co.uk](https://factorio.co.uk) remains Factorio-branded and
+uses the same supplier, payer, investor, and administrator sign-in flow.
 
 One FastHTML process serves both a marketing landing site and an HTMX-driven product
 app (dashboard, marketplace, portfolio, statement, auto-invest), backed by PostgreSQL.
-The entire UI is trilingual (English / Uzbek / Russian).
+The UI supports the 12-language FastSME locale cohort. Administrators choose which
+checked-in languages are available; retained Russian and Uzbek catalogues are disabled
+by default.
 
-The investor experience is modelled on [investly.co](https://investly.co): a reporting
-cockpit, a filterable account statement with CSV export, and an auto-invest (autobidder)
-configuration.
+The investor experience includes a reporting cockpit, a filterable account statement
+with CSV export, and configurable automated investment rules.
 
 ---
 
 ## Features
 
-**Marketing site** — landing, for-sellers, for-investors, how-it-works, pricing, contact.
+**Public sites** — a FastSME-style open-source FastFactoring page plus the Factorio
+reference-product landing, seller, investor, workflow, pricing, and contact pages.
 
 **Investor product app** (`/app/*`):
 
@@ -29,11 +35,13 @@ configuration.
 | `/app/statement` | Unified, filterable transaction ledger (investments out, settlements in) + CSV export |
 | `/app/auto-invest` | Per-investor automated bidding rules (min risk grade, max amount/invoice, preferred sectors, on/off) |
 
-**Investor switcher** — the app uses a no-password, cookie-based investor switcher
-(impersonate any seeded investor) for demo purposes; there is no auth layer.
+**Authentication and RBAC** — session-based local and Google sign-in map users to exactly
+four roles: investor, supplier, payer, or admin. `kaljuvee@gmail.com` is the sole admin;
+the three non-admin roles retain one-click synthetic demo sessions.
 
-**i18n** — every user-facing string is keyed in `utils/i18n.py` with `en` / `uz` / `ru`
-translations; the language is held in a `lang` cookie and toggled via `/set-lang`.
+**i18n** — English is the source/fallback and checked-in JSON catalogues cover Estonian,
+German, French, Swedish, Latvian, Norwegian, Danish, Polish, Dutch, Finnish, and
+Lithuanian. Browser negotiation and the language selector persist the choice.
 
 ---
 
@@ -43,7 +51,7 @@ translations; the language is held in a `lang` cookie and toggled via `/set-lang
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env                       # set DB_URL (PostgreSQL)
+cp .env.example .env                       # set DB_URL or DATABASE_URL_PROD
 python -m db.migrate                       # create the `factorio` schema + tables
 python -m synthetic.generate --seed 42     # seed deterministic demo data
 #   --fresh   truncate then re-seed
@@ -60,8 +68,11 @@ All config is read through `utils/config.py` `settings()` (pydantic-settings, lo
 
 | Var | Meaning | Default |
 |-----|---------|---------|
-| `DB_URL` | PostgreSQL connection string | — (required) |
+| `DATABASE_URL_PROD` | Preferred production PostgreSQL connection | — |
+| `DB_URL` | Local/fallback PostgreSQL connection | — |
 | `APP_SECRET` | session/signing secret | `change-me` |
+| `ADMIN_PASSWORD` | Temporary local password for the sole admin | disabled |
+| `GOOGLE_*` | Google OpenID Connect client, callback, and optional allowlists | disabled |
 | `APP_ENV` | `dev` / `production` | `dev` |
 | `PORT` | HTTP port | `5055` |
 | `XAI_API_KEY` | xAI API key for invoice extraction and assistants | — |
@@ -81,7 +92,7 @@ module does nothing until it is imported at the bottom of `app.py`.**
 
 ```
 main.py ─► app.py ─► fast_app(...)              # the shared app + `rt` decorator
-                  └─ import landing.routes       # marketing pages
+                  └─ import landing.routes       # FastFactoring + Factorio pages
                   └─ import app_routes.dashboard / marketplace / portfolio /
                             statement / autoinvest / _shared   # product app
 ```
@@ -95,7 +106,7 @@ main.py ─► app.py ─► fast_app(...)              # the shared app + `rt` 
 | `app_routes/` | Product app routes; `_shared.py` holds `app_page()`, the investor switcher, the UZS formatter and aging-bucket helpers |
 | `db/` | `schema.sql` (all tables in the **`factorio`** schema), `__init__.py` (psycopg pool: `fetch_all` / `fetch_one` / `execute`), `migrate.py` |
 | `synthetic/` | Deterministic synthetic-data generator (`random.Random(seed)` + `Faker.seed`) |
-| `utils/` | `config.py` (`settings()`) and `i18n.py` (`t()`, `get_lang()`, en/uz/ru) |
+| `utils/` | Configuration, authentication helpers, money formatting, and i18n runtime/catalogues |
 | `scripts/` | Screenshot / GIF / PDF media generation (Playwright) |
 
 ### Data model (`db/schema.sql`)
@@ -117,14 +128,16 @@ CaseFunding → invoice_funding, CaseInvestment → investments).
 Tailwind via CDN + Inter / JetBrains Mono fonts. Parchment background (`#F7F6F1`),
 deep-green accent (`#1F5D43`). Pure server-rendered FastHTML + HTMX — no React/Vue/Svelte.
 HTML entities are wrapped in `NotStr()` (FastHTML escapes strings by default).
+There are no standalone JavaScript/TypeScript source files; roughly 106 lines of inline
+progressive enhancement support the cockpit drawer, streaming chat, and PDF pane. The
+repository application source is therefore well over 99% Python/FastHTML by line count.
 
 ### Conventions
 
 - Schemas always fully qualified (`factorio.*`).
-- All money flows through one formatter (`fmt_uzs()` in `app_routes/_shared.py`); the app
-  is UZS in practice (`marketplace.py` keeps a multi-symbol map for invoice currencies).
-- User-facing copy goes through `t(key, lang)` with all three languages defined — never
-  hardcode display strings.
+- All money flows through one formatter; admins select USD, EUR, or GBP globally.
+- Run `python -m scripts.update_i18n` after UI-copy changes; every enabled locale must
+  exactly cover the English source inventory.
 - New routes must be imported at the bottom of `app.py` for side-effect registration.
 - Nullable SQL filter params are cast (e.g. `%(x)s::date IS NULL OR …`) so Postgres can
   infer their type — an uncast `$n IS NULL` raises `AmbiguousParameter`.
@@ -133,10 +146,10 @@ See [CLAUDE.md](CLAUDE.md) for the full conventions reference.
 
 ---
 
-## Deployment (Coolify CI/CD)
+## Reference Deployment (Coolify CI/CD)
 
-Factorio is deployed on a self-hosted [Coolify](https://coolify.io) instance as a
-Dockerfile-based application sourced from the public GitHub repo. Production runs at
+The Factorio reference product is deployed on a self-hosted [Coolify](https://coolify.io)
+instance from this public GitHub repository. Production runs at
 **[factorio.co.uk](https://factorio.co.uk)**.
 
 ### Manual invoice-extraction test
@@ -172,14 +185,14 @@ docker compose up --build        # local bring-up
 
 ### Coolify setup (one-time)
 
-1. **New Resource → Public Repository** → `https://github.com/predictivelabsai/factorio`,
+1. **New Resource → Public Repository** → `https://github.com/predictivelabsai/FastFactoring`,
    branch `main`, Build Pack **Dockerfile**, Ports Exposes **5055**.
 2. **Environment Variables**: `DB_URL`, `APP_SECRET`, `APP_ENV=production`, `PORT=5055`.
 3. **Auto-deploy webhook** — add the repo webhook so pushes trigger a deploy:
 
    ```bash
    # Coolify → app → Webhooks gives the GitHub URL + secret
-   gh api repos/predictivelabsai/factorio/hooks -X POST --input - <<'JSON'
+   gh api repos/predictivelabsai/FastFactoring/hooks -X POST --input - <<'JSON'
    {
      "name": "web", "active": true, "events": ["push"],
      "config": {
