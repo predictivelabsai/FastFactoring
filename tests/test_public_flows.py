@@ -45,6 +45,11 @@ class PublicFlowTests(unittest.TestCase):
         self.assertIn("Factorio", response.text)
         self.assertIn('href="/login"', response.text)
 
+    def test_health_probe_is_database_independent(self):
+        response = self.client.get("/healthz")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, "ok")
+
     def test_fastfactoring_page_negotiates_active_language(self):
         response = self.client.get(
             "/fastfactoring", headers={"accept-language": "de-DE,de;q=0.9"}

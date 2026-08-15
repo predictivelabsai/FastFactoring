@@ -8,7 +8,7 @@ Single process, two route groups:
 from __future__ import annotations
 
 from fasthtml.common import Beforeware, fast_app, serve
-from starlette.responses import RedirectResponse
+from starlette.responses import PlainTextResponse, RedirectResponse
 
 from utils.config import settings
 from utils.i18n import DEFAULT_LANG, enabled_languages, safe_return_path
@@ -28,6 +28,12 @@ app, rt = fast_app(
     sess_https_only=settings().app_env == "production",
     htmx=True,
 )
+
+
+@rt("/healthz")
+def healthz():
+    """Process health probe; deliberately independent of external services."""
+    return PlainTextResponse("ok")
 
 
 @rt("/set-lang")

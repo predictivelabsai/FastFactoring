@@ -48,6 +48,7 @@ class AuthenticationTests(unittest.TestCase):
         config = SimpleNamespace(
             google_client_id="client-id", google_client_secret="secret",
             google_redirect_uri="https://factorio.co.uk/auth/google/callback",
+            google_redirect_hosts="fastfactoring.org,factorio.co.uk",
             google_allowed_domains="", google_allowed_emails="",
         )
         with patch.object(google_auth, "settings", return_value=config):
@@ -57,6 +58,35 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(query["scope"], ["openid email profile"])
         self.assertEqual(query["state"], ["random-state"])
         self.assertEqual(query["redirect_uri"], ["https://factorio.co.uk/auth/google/callback"])
+
+    def test_google_redirect_tracks_each_allowed_public_brand_host(self):
+        config = SimpleNamespace(
+            google_client_id="client-id", google_client_secret="secret",
+            google_redirect_uri="https://fastfactoring.org/auth/google/callback",
+            google_redirect_hosts="fastfactoring.org,factorio.co.uk",
+            google_allowed_domains="", google_allowed_emails="",
+        )
+        with patch.object(google_auth, "settings", return_value=config):
+            factorio = google_auth.callback_uri(self.request())
+            fastfactoring_request = self.request()
+            fastfactoring_request.headers["host"] = "fastfactoring.org"
+            fastfactoring_request.url.netloc = "fastfactoring.org"
+            fastfactoring = google_auth.callback_uri(fastfactoring_request)
+        self.assertEqual(factorio, "https://factorio.co.uk/auth/google/callback")
+        self.assertEqual(fastfactoring, "https://fastfactoring.org/auth/google/callback")
+
+    def test_google_redirect_rejects_untrusted_host_header(self):
+        config = SimpleNamespace(
+            google_client_id="client-id", google_client_secret="secret",
+            google_redirect_uri="https://fastfactoring.org/auth/google/callback",
+            google_redirect_hosts="fastfactoring.org,factorio.co.uk",
+            google_allowed_domains="", google_allowed_emails="",
+        )
+        request = self.request()
+        request.headers["host"] = "attacker.example"
+        with patch.object(google_auth, "settings", return_value=config):
+            callback = google_auth.callback_uri(request)
+        self.assertEqual(callback, "https://fastfactoring.org/auth/google/callback")
 
     def test_google_callback_maps_only_named_identity_to_admin(self):
         request = self.request({"google_oauth_state": "state"})

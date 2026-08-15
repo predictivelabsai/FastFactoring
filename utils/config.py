@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
     google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
     google_redirect_uri: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
+    google_redirect_hosts: str = Field(
+        default="fastfactoring.org,factorio.co.uk",
+        alias="GOOGLE_REDIRECT_HOSTS",
+    )
     google_allowed_domains: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
     google_allowed_emails: str = Field(default="", alias="GOOGLE_ALLOWED_EMAILS")
 

@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-08-15 — v1.1.1
+
+- Added trusted dual-brand Google OAuth callback selection for FastFactoring and Factorio, with host-header fallback protection.
+- Added a database-independent production health endpoint for Coolify deployment checks.
+
 ## 2026-08-14 — v1.1.0
 
 - Repositioned FastFactoring as the open-source platform while keeping Factorio as the standalone reference demo and application brand.

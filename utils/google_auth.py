@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import secrets
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from utils.config import settings
@@ -20,13 +20,36 @@ def new_state() -> str:
     return secrets.token_urlsafe(32)
 
 
+def _request_host(request) -> str:
+    forwarded = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    # Coolify normally sends one host, but RFC 7239-compatible proxies may
+    # append a comma-separated chain. Only the original public host matters.
+    host = forwarded.split(",", 1)[0].strip().lower()
+    return host.split(":", 1)[0]
+
+
 def callback_uri(request) -> str:
-    configured = settings().google_redirect_uri.strip()
+    cfg = settings()
+    configured = cfg.google_redirect_uri.strip()
+    configured_host = (urlsplit(configured).hostname or "").lower() if configured else ""
+    allowed_hosts = {
+        item.strip().lower()
+        for item in cfg.google_redirect_hosts.split(",")
+        if item.strip()
+    }
+    if configured_host:
+        allowed_hosts.add(configured_host)
+
+    host = _request_host(request)
+    if host and host in allowed_hosts:
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https")
+        proto = proto.split(",", 1)[0].strip().lower()
+        if proto not in {"http", "https"}:
+            proto = "https"
+        return f"{proto}://{host}/auth/google/callback"
     if configured:
         return configured
-    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
-    return f"{proto}://{host}/auth/google/callback"
+    raise RuntimeError("Google OAuth redirect URI is not configured for this host")
 
 
 def authorize_url(request, state: str) -> str:
