@@ -6,7 +6,7 @@ factoring / supply-chain-finance platform** with a full back office, role-based
 access control, and bank-white-label deployment.
 
 This plan draws on three inputs: the back-office capability brief, the incumbent
-Investly product (three decks in `data/`), and the existing Factorio schema
+legacy marketplace product (three decks in `data/`), and the existing Factorio schema
 (`db/schema.sql`), which already mirrors much of the model.
 
 ---
@@ -24,11 +24,11 @@ the receivable — with a bank or fund providing capital:
 - **Admin (internal)** — operations, credit, collections, finance, compliance,
   executive — runs the back office.
 
-Product lines on shared infrastructure (Investly ran two; we generalise to four):
+Product lines on shared infrastructure (the legacy marketplace ran two; we generalise to four):
 **factoring** (recourse / non-recourse), **invoice discounting** (confidential),
 **reverse factoring / SCF** (buyer-led), and **refinancing / forfaiting**
 (cross-border, longer-tenor). Pricing engine supports both **fixed-rate** and
-**reverse-auction** (Investly's moat: investors bid the rate down).
+**reverse-auction** (the legacy marketplace's moat: investors bid the rate down).
 
 ---
 
@@ -102,35 +102,35 @@ Every state-changing action is written to an **immutable audit log**
 ## 3. Back-office functional modules
 
 Mapped from the capability brief; each is a module under `/app/admin/*` with
-its own data and RBAC. Investly features noted where they apply.
+its own data and RBAC. Legacy marketplace features noted where they apply.
 
 ### 3.1 Client & debtor onboarding / management
 KYC/AML (client + debtor), creditworthiness assessment, client agreements,
 **facility limits** (advance rates 70–90%), **debtor ledger**, **concentration
-limits**, **approved-buyer lists**. *Investly:* due-diligence + Amadeus BvD
+limits**, **approved-buyer lists**. *legacy marketplace:* due-diligence + Amadeus BvD
 company data + investor accreditation/verification.
 
 ### 3.2 Invoice processing & verification
 Upload/validation (API + accounting integrations — QuickBooks, Xero, 1C),
 authenticity checks, PO/contract matching, **assignment/pledging** (notified or
 confidential), **holdback/reserve** calculation. *Uzbekistan:* SoliqOnline
-verification (see AI plan). *Investly:* digital signature (SignWise-style).
+verification (see AI plan). *legacy marketplace:* digital signature (SignWise-style).
 
 ### 3.3 Funding & disbursements
 Advance calculation & payout (same/next-day), **reserve release** on debtor
 payment, fee/interest reconciliation, late fees, **multi-currency & cross-border**
-(export factoring / forfaiting). *Investly:* investor wallet, deposits/withdrawals,
+(export factoring / forfaiting). *legacy marketplace:* investor wallet, deposits/withdrawals,
 direct debit, internal payment ledger.
 
 ### 3.4 Collections & credit management
 Automated reminders / **dunning**, collections workflow, dispute resolution,
 **bad-debt provisioning & write-offs** (recourse / non-recourse), credit-insurance
-integration. *Investly:* Creditreform-style automated collections partner.
+integration. *legacy marketplace:* Creditreform-style automated collections partner.
 
 ### 3.5 Risk management & underwriting
 Real-time **scoring** (multi-signal), portfolio risk monitoring, **fraud
 detection** (duplicate invoices), aging & **dilution** tracking, **exposure limits**
-per client/debtor/sector. *Investly's differentiator:* score **both applicant and
+per client/debtor/sector. *the legacy marketplace's differentiator:* score **both applicant and
 debtor** before auction; **model back-testing — actual vs expected default rate**.
 
 ### 3.6 Accounting & financial operations
@@ -141,7 +141,7 @@ VAT/tax on factored invoices.
 ### 3.7 Reporting & analytics
 Dashboards: portfolio performance, **DSO**, recovery rates, dilution;
 **funder/investor reports** (incl. securitisation/SPV); compliance & audit trails.
-*Investly KPIs:* funnel conversion, time-per-application (incl. admin time),
+*Marketplace KPIs:* funnel conversion, time-per-application (incl. admin time),
 default-rate accuracy, CAC/LTV by channel.
 
 ### 3.8 Compliance, legal & audit
@@ -151,7 +151,7 @@ support; data retention.
 
 ---
 
-## 4. Enterprise features (from Investly + market)
+## 4. Enterprise features (from market research)
 
 | Feature | Status in repo | Plan |
 |---|---|---|
@@ -230,7 +230,7 @@ flowchart TB
 | **0 — Demo (this pass)** | RBAC + admin console + i18n×5 + sectors + multi-currency | Role switcher, `/app/admin` with onboarding / risk / funding / collections / reports (demo data), audit log; ES/FR added; UZS off home page |
 | **1 — MVP back office** | Real ops | Real auth, KYC workflow, facility limits, invoice verification + assignment, funding approval with SoD, dunning |
 | **2 — Risk & money** | Underwriting + GL | Scoring engine + back-testing, fraud checks, ledger/reconciliation, multi-currency/FX |
-| **3 — Marketplace depth** | Investly parity | Reverse-auction engine, autobidder, secondary market, investor accreditation |
+| **3 — Marketplace depth** | marketplace parity | Reverse-auction engine, autobidder, secondary market, investor accreditation |
 | **4 — Enterprise & integrations** | Scale | SSO/MFA, accounting + bank-API + bureau + e-sign + collections integrations, public API, SPV reporting |
 
 ---

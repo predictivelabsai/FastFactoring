@@ -9,7 +9,7 @@ approve write-offs).
 
 from __future__ import annotations
 
-from fasthtml.common import Div, P, Span, A, Table, Thead, Tbody, Tr, Th, Td
+from fasthtml.common import Div, P, Span, A, Table, Thead, Tbody, Tr, Th, Td, Form, Input, Button
 from starlette.responses import RedirectResponse
 
 from app import rt
@@ -106,11 +106,21 @@ def collections(req):
         provision += prov
         acts = []
         if can_dun and stage < 4:
-            acts.append(A("Escalate", href=f"/app/admin/collections/act?inv={num}&do=escalate",
-                          cls="text-xs px-2 py-1 rounded-full bg-accent text-bg mr-1"))
+            from utils.access import context_for
+            acts.append(Form(Input(type="hidden", name="inv", value=num),
+                             Input(type="hidden", name="do", value="escalate"),
+                             Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                             Button("Escalate", type="submit",
+                                    cls="text-xs px-2 py-1 rounded-full bg-accent text-bg mr-1"),
+                             action="/app/admin/collections/act", method="post", cls="inline"))
         if can_wo and stage >= 3 and stage < 5:
-            acts.append(A("Write-off", href=f"/app/admin/collections/act?inv={num}&do=writeoff",
-                          cls="text-xs px-2 py-1 rounded-full border border-red-300 text-red-700"))
+            from utils.access import context_for
+            acts.append(Form(Input(type="hidden", name="inv", value=num),
+                             Input(type="hidden", name="do", value="writeoff"),
+                             Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                             Button("Write-off", type="submit",
+                                    cls="text-xs px-2 py-1 rounded-full border border-red-300 text-red-700"),
+                             action="/app/admin/collections/act", method="post", cls="inline"))
         rows.append(Tr(
             Td(num, cls=_TD), Td(r["debtor_name"], cls=_TD),
             Td(fmt_uzs(amt), cls=_TDR),
@@ -140,8 +150,11 @@ def collections(req):
                     role="admin", subrole=current_subrole(req))
 
 
-@rt("/app/admin/collections/act")
-def collections_act(req, inv: str = "", do: str = ""):
+@rt("/app/admin/collections/act", methods=["POST"])
+def collections_act(req, inv: str = "", do: str = "", csrf: str = ""):
+    import hmac
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     g = _guard(req)
     if g:
         return g

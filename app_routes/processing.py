@@ -9,7 +9,9 @@ assign (SoD-gated), with every action audited.
 
 from __future__ import annotations
 
-from fasthtml.common import Div, P, Span, A, Table, Thead, Tbody, Tr, Th, Td
+import hmac
+
+from fasthtml.common import Div, P, Span, A, Button, Form, Input, Table, Thead, Tbody, Tr, Th, Td
 from starlette.responses import RedirectResponse
 
 from app import rt
@@ -17,6 +19,7 @@ from utils.i18n import get_lang
 from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, fmt_uzs, current_role, current_subrole
 from app_routes.admin import log_action
+from utils.access import context_for
 
 try:
     from db import fetch_all, fetch_one, execute
@@ -116,8 +119,14 @@ def processing(req):
         act = Span("—", cls="text-ink-dim text-xs")
         if can and st != "assigned":
             nxt = "verify" if st == "submitted" else "assign"
-            act = A(nxt.title(), href=f"/app/admin/processing/act?inv={r['invoice_number']}&step={nxt}",
-                    cls="text-xs px-2 py-1 rounded-full bg-accent text-bg")
+            act = Form(
+                Input(type="hidden", name="inv", value=r["invoice_number"]),
+                Input(type="hidden", name="step", value=nxt),
+                Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                Button(nxt.title(), type="submit",
+                       cls="text-xs px-2 py-1 rounded-full bg-accent text-bg"),
+                method="post", action="/app/admin/processing/act",
+            )
         _num = (r["invoice_number"] or "").replace("'", "")
         _deb = (r["debtor_name"] or "").replace("'", "")
         rows.append(Tr(
@@ -151,11 +160,13 @@ def _table_wrap(headers, rows):
                cls="rounded-2xl bg-bg-elevated border border-line overflow-hidden overflow-x-auto")
 
 
-@rt("/app/admin/processing/act")
-def processing_act(req, inv: str = "", step: str = ""):
+@rt("/app/admin/processing/act", methods=["POST"])
+def processing_act(req, inv: str = "", step: str = "", csrf: str = ""):
     g = _guard(req)
     if g:
         return g
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     sub = current_subrole(req)
     if sub in CAN_PROCESS and _HAS_DB:
         if step == "verify":

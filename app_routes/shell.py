@@ -57,6 +57,7 @@ TOOLS = {
     "reports_admin":("nav_admin_reports",      "\U0001F4C8", "/app/admin/reports"),
     "audit":        ("nav_admin_audit",        "\U0001F4DC", "/app/admin/audit"),
     "languages":    ("nav_languages",          "🌐",         "/app/admin/languages"),
+    "team":         ("nav_team",               "👥",         "/app/admin/team"),
     "pipeline":     ("nav_pipeline",           "\U0001F4C7", "/app/crm"),
     "drive":        ("nav_drive",              "\U0001F5C2️", "/app/drive"),
     "docs":         ("nav_docs",               "\U0001F4DD", "/app/docs"),
@@ -71,7 +72,7 @@ _TOOLS_BY_ROLE = {
     "payer":    ["payer"],
     "admin":    ["console", "settings", "onboarding", "processing", "risk", "scoring", "funding",
                  "collections", "accounting", "compliance", "integrations",
-                 "reports_admin", "audit", "languages", "pipeline", "drive", "docs", "mail",
+                 "reports_admin", "audit", "languages", "team", "pipeline", "drive", "docs", "mail",
                  "dashboard", "marketplace", "auctions", "secondary", "portfolio", "statement"],
 }
 
@@ -101,7 +102,7 @@ _NAV_GROUPS = {
         ("markets", "nav_group_markets",
          ["dashboard", "marketplace", "auctions", "secondary", "portfolio", "statement"]),
         ("workspace", "nav_group_workspace", ["drive", "docs", "mail"]),
-        ("governance", "nav_group_governance", ["integrations", "audit"]),
+        ("governance", "nav_group_governance", ["team", "integrations", "audit"]),
     ],
 }
 
@@ -509,7 +510,23 @@ def _lang_pill(lang: str, current_path: str):
 
 def _topbar(lang: str, role: str, investor, investors, current_path: str):
     from app_routes._shared import _investor_switcher
-    right = _investor_switcher(investor, investors, lang) if role == "investor" else Span("", cls="hidden")
+    from utils.access import current_context
+    ctx = current_context()
+    right = (_investor_switcher(investor, investors, lang)
+             if role == "investor" and not ctx.preview else Span("", cls="hidden"))
+    preview = Span("", cls="hidden")
+    if ctx.actual_role == "admin":
+        preview = Form(
+            Input(type="hidden", name="csrf", value=ctx.csrf_token),
+            Select(
+                Option("Admin", value="admin", selected=not ctx.preview),
+                Option("Supplier", value="supplier", selected=role == "supplier"),
+                Option("Investor", value="investor", selected=role == "investor"),
+                Option("Payer", value="payer", selected=role == "payer"),
+                name="role", aria_label="Viewing as",
+                onchange="this.form.submit()", cls="text-xs border border-line rounded-md px-2 py-1 bg-white"),
+            action="/app/role-preview", method="post", cls="flex items-center")
+    identity = ctx.name or ctx.email
     return Div(
         Div(
             Button(NotStr("&#9776;"), onclick="wsToggleNav()", type="button",
@@ -517,13 +534,30 @@ def _topbar(lang: str, role: str, investor, investors, current_path: str):
             A(Span(NotStr("&#9670;"), cls="text-accent mr-2"), Span(SITE_NAME, cls="font-medium tracking-tight text-ink"),
               href="/", cls="flex items-center text-base no-underline"),
             cls="flex items-center"),
-        Div(A(t("nav_signin", lang), href="/login", cls="hidden sm:inline text-xs text-ink-muted hover:text-ink no-underline"),
-            Span("/", cls="hidden sm:inline text-ink-dim text-xs"),
-            A(t("nav_signout", lang), href="/logout", cls="hidden sm:inline text-xs text-ink-muted hover:text-ink no-underline mr-2"),
-            Span(t(f"role_{role}", lang), cls="text-xs font-medium text-ink-muted"),
+        Div(Span(identity, title=ctx.email,
+                 cls="hidden md:inline text-xs text-ink-muted max-w-48 truncate"),
+            preview,
+            Span("Previewing " + role.title() if ctx.preview else t(f"role_{role}", lang),
+                 cls="text-xs font-medium text-ink-muted"),
             right, _lang_pill(lang, current_path),
+            A(t("nav_signout", lang), href="/logout",
+              cls="hidden sm:inline text-xs text-ink-muted hover:text-ink no-underline"),
             cls="flex items-center gap-3"),
         cls="ws-top")
+
+
+def _preview_banner():
+    from utils.access import current_context
+    ctx = current_context()
+    if not ctx.preview:
+        return None
+    return Div(
+        Span(f"Previewing {ctx.effective_role.title()} · synthetic demo data"),
+        Form(Input(type="hidden", name="csrf", value=ctx.csrf_token),
+             Button("Exit preview", type="submit",
+                    cls="text-xs font-medium underline bg-transparent border-0 cursor-pointer"),
+             action="/app/preview-exit", method="post"),
+        cls="flex items-center justify-between gap-4 px-5 py-2 bg-amber-100 border-b border-amber-300 text-amber-950 text-sm")
 
 
 def _lang_of(lang: str) -> str:
@@ -550,7 +584,7 @@ def app_shell(title: str, *content, current_path: str = "/app", lang: str = DEFA
         Head(*_head(title, lang)),
         Body(Div(_topbar(lang, role, investor, investors, current_path),
                  _left_nav(role, current_path, lang),
-                 Div(*content, cls="ws-center"),
+                 Div(_preview_banner(), *content, cls="ws-center"),
                  Div(cls="ws-backdrop", onclick="wsToggleNav()"),
                  cls="ws", id="ws"),
              _pdf_pane(),
@@ -566,13 +600,13 @@ def app_home(req):
     from app_routes._shared import current_role, list_investors, current_investor
     lang = get_lang(req)
     role = current_role(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors) if role == "investor" else None
     return localize_tree(Html(
         Head(*_head(t("nav_investor_ai", lang) if role == "investor" else "Factorio AI", lang)),
         Body(Div(_topbar(lang, role, investor, investors, "/app"),
                  _left_nav(role, "/app", lang),
-                 Div(_chat_center(lang, role), cls="ws-center"),
+                 Div(_preview_banner(), _chat_center(lang, role), cls="ws-center"),
                  Div(cls="ws-backdrop", onclick="wsToggleNav()"),
                  cls="ws", id="ws"),
              _pdf_pane(),
@@ -689,6 +723,28 @@ async def copilot_stream(req):
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg},
             ], temperature=0.2, max_tokens=500)
+            yield _sse("token", {"text": reply})
+            yield _sse("done", {})
+            return
+        if role == "payer":
+            from db import fetch_all
+            from utils import ai
+            from utils.access import context_for
+            ctx = context_for(req)
+            invoices = fetch_all(
+                """SELECT invoice_number,debtor_name,amount,currency,due_date,status
+                     FROM factorio.invoices WHERE debtor_registration=%s
+                     ORDER BY due_date LIMIT 25""",
+                (ctx.payer_registration,),
+            ) if ctx.payer_registration else []
+            system = (
+                "You are Factorio Payer AI. Answer only from the payer obligations supplied below. "
+                "Never discuss other clients, debtors, investors, platform exposure, credit scores, "
+                "or back-office data. If the answer is not in this scoped data, say so.\n\n"
+                + json.dumps(invoices, default=str)
+            )
+            reply = ai.chat(ai.build_conversation(system, history, msg),
+                            temperature=0.1, max_tokens=500)
             yield _sse("token", {"text": reply})
             yield _sse("done", {})
             return

@@ -19,6 +19,15 @@ class PublicFlowTests(unittest.TestCase):
             patch("landing.fastfactoring.enabled_languages", return_value=DEFAULT_ENABLED_LANGS),
             patch("app_routes.shell.enabled_languages", return_value=DEFAULT_ENABLED_LANGS),
             patch("app_routes._shared.list_investors", return_value=[]),
+            patch("app_routes.auth.accounts.demo_account",
+                  return_value={"email": "investor1@factorio.co.uk", "name": "Investor", "session_version": 7}),
+            patch("utils.access._profile", return_value={
+                "email": "investor1@factorio.co.uk", "name": "Investor", "status": "active",
+                "is_verified": True, "role": "investor", "company_id": None,
+                "investor_user_id": 1, "supplier_user_id": None,
+                "payer_registration": "", "is_synthetic": True,
+                "session_version": 7,
+            }),
         ]
         for patcher in self.patchers:
             patcher.start()
@@ -34,10 +43,17 @@ class PublicFlowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 303)
         self.assertEqual(response.headers["location"], "/login")
 
-        response = self.client.get("/login/demo?who=investor", follow_redirects=False)
+        disabled = self.client.get("/login/demo?who=investor", follow_redirects=False)
+        self.assertEqual(disabled.headers["location"], "/login")
+
+        response = self.client.get("/login/demo?who=investor", headers={"host": "factorio.co.uk"},
+                                   follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         self.assertEqual(response.headers["location"], "/app")
-        self.assertEqual(self.client.get("/app").status_code, 200)
+        app_response = self.client.get("/app")
+        self.assertEqual(app_response.status_code, 200)
+        self.assertNotIn('href="/login"', app_response.text)
+        self.assertIn('href="/logout"', app_response.text)
 
     def test_factorio_host_retains_reference_brand_and_login_flow(self):
         response = self.client.get("/", headers={"host": "factorio.co.uk"})

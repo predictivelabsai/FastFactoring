@@ -6,6 +6,7 @@ Admin-only.
 from __future__ import annotations
 
 import json
+import hmac
 
 from fasthtml.common import (
     Div, P, Span, A, Button, Form, Textarea, Input, NotStr, H3, Style,
@@ -16,6 +17,7 @@ from app import rt
 from utils.i18n import get_lang
 from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, current_role, current_subrole
+from utils.access import context_for
 from utils import agents as fleet
 
 try:
@@ -150,10 +152,13 @@ def agents_console(req):
         Div(*feed_rows, cls="") if feed_rows else P("No agent actions yet.", cls="text-ink-muted text-xs"),
         cls="p-5 rounded-2xl bg-bg-elevated border border-line")
 
-    kill = A(("⏻ Fleet: ON" if on else "⏻ Fleet: PAUSED"),
-             href="/app/admin/agents/toggle",
-             cls="text-xs font-medium px-4 py-2 rounded-full " +
-                 ("bg-accent text-bg" if on else "bg-red-100 text-red-700 border border-red-200"))
+    kill = Form(
+        Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+        Button(("⏻ Fleet: ON" if on else "⏻ Fleet: PAUSED"), type="submit",
+               cls="text-xs font-medium px-4 py-2 rounded-full " +
+                   ("bg-accent text-bg" if on else "bg-red-100 text-red-700 border border-red-200")),
+        method="post", action="/app/admin/agents/toggle",
+    )
 
     return app_page(
         "Agent fleet",
@@ -318,11 +323,13 @@ async def agent_skill_revert(req, slug: str):
     return RedirectResponse(f"/app/admin/agents/skills/{slug}", status_code=303)
 
 
-@rt("/app/admin/agents/toggle")
-def agents_toggle(req):
+@rt("/app/admin/agents/toggle", methods=["POST"])
+def agents_toggle(req, csrf: str = ""):
     g = _guard(req)
     if g:
         return g
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     fleet.set_agents_enabled(not fleet.agents_enabled())
     return RedirectResponse("/app/admin/agents", status_code=303)
 

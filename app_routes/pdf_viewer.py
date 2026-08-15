@@ -130,11 +130,25 @@ def _invoice_pdf_bytes(r: dict) -> bytes:
 
 @rt("/app/invoice-pdf/{invoice_number}")
 def invoice_pdf(req, invoice_number: str):
+    from utils.access import context_for
+    ctx = context_for(req)
+    if not _HAS_DB:
+        return Response("db unavailable", status_code=503)
+    role_predicate = {
+        "admin": "TRUE",
+        "supplier": "i.seller_id=%(subject)s",
+        "payer": "i.debtor_registration=%(registration)s",
+        "investor": "EXISTS (SELECT 1 FROM factorio.invoice_funding f JOIN factorio.investments x ON x.funding_id=f.id WHERE f.invoice_id=i.id AND x.investor_id=%(subject)s)",
+    }.get(ctx.effective_role, "FALSE")
+    params = {"n": invoice_number,
+              "subject": ctx.supplier_user_id if ctx.effective_role == "supplier" else ctx.investor_user_id,
+              "registration": ctx.payer_registration}
+    authorized = fetch_one(f"SELECT i.id FROM factorio.invoices i WHERE i.invoice_number=%(n)s AND {role_predicate}", params)
+    if not authorized:
+        return Response("invoice not found", status_code=404)
     if invoice_number in _pdf_cache:
         data = _pdf_cache[invoice_number]
     else:
-        if not _HAS_DB:
-            return Response("db unavailable", status_code=503)
         r = fetch_one("""
             SELECT i.invoice_number, i.debtor_name, i.amount, i.currency, i.issue_date,
                    i.due_date, i.payment_terms_days, i.sector, i.risk_grade,

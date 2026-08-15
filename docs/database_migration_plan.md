@@ -1,5 +1,16 @@
 # Production Database Migration Plan
 
+## Completion record
+
+Completed on 15 August 2026. A schema-scoped archive copied all 33 legacy
+`factorio` tables and all 791 source rows to `DATABASE_URL_PROD`; row counts
+were verified table by table. Current additive definitions then brought the
+target to 37 tables, normalized legacy `seller`/`borrower` identities to
+`supplier`, demoted every non-owner admin identity, added record scopes and
+session-version controls, and marked the 30 migrated invoices as synthetic.
+The temporary target pre-clone recovery archive is
+`/tmp/fastfactoring-target-preclone-20260815T194937Z.dump` on the operator host.
+
 ## Scope
 
 Move the existing synthetic Factorio dataset from the legacy `DB_URL` instance to the new `DATABASE_URL_PROD` PostgreSQL instance. Only the isolated `factorio` schema is transferred; other databases and schemas are untouched.

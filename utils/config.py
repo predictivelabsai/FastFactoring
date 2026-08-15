@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     )
     google_allowed_domains: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
     google_allowed_emails: str = Field(default="", alias="GOOGLE_ALLOWED_EMAILS")
+    postmark_api_token: str = Field(default="", alias="POSTMARK_API_TOKEN")
+    from_email: str = Field(default="info@fastsme.com", alias="FROM_EMAIL")
+    public_url: str = Field(default="http://localhost:5055", alias="PUBLIC_URL")
+    integration_webhook_token: str = Field(default="", alias="INTEGRATION_WEBHOOK_TOKEN")
 
     # AI — Grok via x.ai (OpenAI-compatible API). Powers the chat-based loan
     # triage and investor-reporting assistants (see utils/ai.py).

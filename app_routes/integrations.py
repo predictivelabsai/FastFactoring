@@ -8,7 +8,7 @@ JSON — a real integration surface, not just a settings page.
 
 from __future__ import annotations
 
-from fasthtml.common import Div, P, Span, A, H3, NotStr
+from fasthtml.common import Div, P, Span, A, H3, NotStr, Form, Input, Button
 from starlette.responses import RedirectResponse, JSONResponse
 
 from app import rt
@@ -85,10 +85,14 @@ def integrations(req):
         conn = r["connected"]
         action = Span("—", cls="text-ink-dim text-xs")
         if can:
-            action = A("Disconnect" if conn else "Connect",
-                       href=f"/app/admin/integrations/toggle?name={r['name']}",
+            from utils.access import context_for
+            action = Form(
+                Input(type="hidden", name="name", value=r["name"]),
+                Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                Button("Disconnect" if conn else "Connect", type="submit",
                        cls=("text-xs px-3 py-1 rounded-full " + ("border border-line text-ink" if conn
-                            else "bg-accent text-bg")))
+                            else "bg-accent text-bg"))),
+                method="post", action="/app/admin/integrations/toggle")
         cards.append(Div(
             Div(Span(_KIND_ICON.get(r["kind"], "\U0001F517"), cls="text-2xl"),
                 Span("● connected" if conn else "○ available",
@@ -120,8 +124,11 @@ def integrations(req):
                     role="admin", subrole=current_subrole(req))
 
 
-@rt("/app/admin/integrations/toggle")
-def integrations_toggle(req, name: str = ""):
+@rt("/app/admin/integrations/toggle", methods=["POST"])
+def integrations_toggle(req, name: str = "", csrf: str = ""):
+    import hmac
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     g = _guard(req)
     if g:
         return g
@@ -140,6 +147,14 @@ def integrations_toggle(req, name: str = ""):
 
 @rt("/api/integrations/invoice", methods=["POST"])
 async def ingest_invoice(req):
+    import hmac
+    from utils.config import settings
+    configured = settings().integration_webhook_token
+    supplied = req.headers.get("x-factorio-webhook-token", "")
+    if not configured:
+        return JSONResponse({"ok": False, "error": "webhook disabled"}, status_code=503)
+    if not supplied or not hmac.compare_digest(supplied, configured):
+        return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
     try:
         body = await req.json()
     except Exception:
@@ -148,17 +163,23 @@ async def ingest_invoice(req):
         except Exception:
             body = {}
     seller = body.get("seller") or "External Seller"
+    supplier_email = str(body.get("supplier_email") or "").strip().lower()
     debtor = body.get("debtor") or "External Debtor"
     try:
         amount = float(body.get("amount") or 0)
     except (TypeError, ValueError):
         amount = 0.0
     due = body.get("due_date") or None
-    if not _HAS_DB or amount <= 0:
-        return JSONResponse({"ok": False, "error": "amount required"}, status_code=400)
+    if not _HAS_DB or amount <= 0 or not supplier_email:
+        return JSONResponse({"ok": False, "error": "amount and supplier_email required"}, status_code=400)
     try:
-        seller_row = fetch_one("SELECT id FROM factorio.users WHERE role='seller' ORDER BY id LIMIT 1")
-        comp = fetch_one("SELECT id FROM factorio.companies ORDER BY id LIMIT 1")
+        scope = fetch_one("""SELECT p.supplier_user_id,p.company_id
+                              FROM factorio.access_profiles p JOIN factorio.app_users u ON u.email=p.email
+                              WHERE lower(p.email)=%(email)s AND p.role='supplier'
+                                AND u.status='active' AND u.is_verified=TRUE""",
+                          {"email": supplier_email})
+        if not scope or not scope.get("supplier_user_id") or not scope.get("company_id"):
+            return JSONResponse({"ok": False, "error": "supplier scope not found"}, status_code=404)
         num = "EXT-" + hex(abs(hash((seller, debtor, amount))) % 0xFFFFFF)[2:].upper()
         execute("""INSERT INTO factorio.invoices
                    (invoice_number,seller_id,company_id,debtor_name,description,sector,amount,currency,
@@ -166,7 +187,7 @@ async def ingest_invoice(req):
                    VALUES (%(num)s,%(sid)s,%(cid)s,%(deb)s,%(desc)s,'other',%(amt)s,'USD',
                     CURRENT_DATE, COALESCE(%(due)s::date, CURRENT_DATE + 60), 60, 'submitted','B')
                    ON CONFLICT (invoice_number) DO NOTHING""",
-                {"num": num, "sid": (seller_row or {}).get("id"), "cid": (comp or {}).get("id"),
+                {"num": num, "sid": scope["supplier_user_id"], "cid": scope["company_id"],
                  "deb": debtor, "desc": f"Ingested from external system (seller {seller})",
                  "amt": amount, "due": due})
         return JSONResponse({"ok": True, "invoice_number": num, "status": "submitted"})

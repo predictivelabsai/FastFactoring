@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import date
 
 from fasthtml.common import Div, Span, A, Nav, Ul, Li, Select, Option
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 
 from app import rt
 from utils.i18n import t, DEFAULT_LANG
+from utils.access import ADMIN_EMAIL, audit, context_for, current_context, normalize_role
 
 try:
     from db import fetch_all
@@ -43,36 +44,49 @@ def display_name(username: str | None) -> str:
     return username or ""
 
 
-def list_investors() -> list[dict]:
+def list_investors(req=None) -> list[dict]:
     if not _HAS_DB:
         return []
     try:
-        return fetch_all(
-            "SELECT id, username, email FROM factorio.users "
-            "WHERE role = 'investor' ORDER BY id"
-        )
+        ctx = context_for(req) if req is not None else current_context()
+        if ctx.effective_role == "investor" and ctx.investor_user_id:
+            return fetch_all(
+                "SELECT id,username,email FROM factorio.users WHERE role='investor' AND id=%s",
+                (ctx.investor_user_id,),
+            )
+        if ctx.effective_role == "admin":
+            return fetch_all(
+                "SELECT id,username,email FROM factorio.users WHERE role='investor' ORDER BY id"
+            )
+        return []
     except Exception:
         return []
 
 
 def current_investor(req, investors: list[dict] | None = None) -> dict | None:
-    """Resolve the 'logged-in' investor from the `investor` cookie.
+    """Resolve only the investor authorized by the access profile.
 
-    Falls back to the first investor so the app is never empty in a demo.
+    Native admins may select a record for operational review; non-admin cookies
+    are ignored and never change record scope.
     """
     investors = investors if investors is not None else list_investors()
     if not investors:
         return None
+    ctx = context_for(req) if req is not None else current_context()
+    if ctx.effective_role == "investor" and ctx.investor_user_id:
+        return next((item for item in investors if item["id"] == ctx.investor_user_id), None)
     cookie = req.cookies.get("investor") if req is not None else None
-    if cookie:
+    if ctx.effective_role == "admin" and cookie:
         for inv in investors:
             if str(inv["id"]) == str(cookie):
                 return inv
-    return investors[0]
+    return investors[0] if ctx.effective_role == "admin" else None
 
 
 @rt("/app/set-investor")
 def set_investor(req, investor_id: int = 0):
+    if current_role(req) != "admin":
+        return Response("Forbidden", status_code=403)
     referer = req.headers.get("referer", "/app")
     resp = RedirectResponse(referer, status_code=303)
     resp.set_cookie("investor", str(investor_id),
@@ -89,23 +103,9 @@ ROLES = ("investor", "supplier", "payer", "admin")
 ADMIN_SUBROLES = ("super",)
 
 
-def _norm_role(r: str | None) -> str:
-    if r == "seller":          # legacy alias
-        return "supplier"
-    return r if r in ROLES else "investor"
-
-
 def current_role(req) -> str:
-    """Resolve the immutable session role; browser cookies cannot elevate it."""
-    s = getattr(req, "session", None) if req is not None else None
-    if s and s.get("role"):
-        role = _norm_role(s["role"])
-        if role == "admin":
-            from app_routes.auth import ADMIN_EMAIL
-            if str(s.get("uid", "")).lower() != ADMIN_EMAIL:
-                return "investor"
-        return role
-    return "investor"
+    """Return the database-backed effective role for this request."""
+    return context_for(req).effective_role
 
 
 def current_subrole(req) -> str:
@@ -113,10 +113,34 @@ def current_subrole(req) -> str:
     return "super" if current_role(req) == "admin" else "ops"
 
 
-@rt("/app/set-role")
-def set_role(req, role: str = "investor"):
-    """Legacy endpoint retained as a safe no-op; roles come from authentication."""
+def _valid_csrf(req, token: str) -> bool:
+    expected = str((getattr(req, "session", None) or {}).get("csrf_token") or "")
+    import secrets
+    return bool(expected and token and secrets.compare_digest(expected, token))
+
+
+@rt("/app/role-preview", methods=["POST"])
+def role_preview(req, role: str = "admin", csrf: str = ""):
+    ctx = context_for(req)
+    role = normalize_role(role)
+    if ctx.actual_role != "admin" or not role or not _valid_csrf(req, csrf):
+        return Response("Forbidden", status_code=403)
+    previous = ctx.effective_role
+    if role == "admin":
+        req.session.pop("preview_role", None)
+    else:
+        req.session["preview_role"] = role
+    target = context_for(req)
+    audit(target, "preview_start" if role != "admin" else "preview_end", role,
+          f"actual={target.actual_role};from={previous};effective={target.effective_role};"
+          f"supplier={target.supplier_user_id};investor={target.investor_user_id};"
+          f"payer={target.payer_registration};synthetic={target.is_synthetic}")
     return RedirectResponse("/app", status_code=303)
+
+
+@rt("/app/preview-exit", methods=["POST"])
+def preview_exit(req, csrf: str = ""):
+    return role_preview(req, role="admin", csrf=csrf)
 
 
 # ── Aging buckets (days past due) ───────────────────────────────────────

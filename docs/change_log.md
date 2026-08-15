@@ -1,5 +1,14 @@
 # Change Log
 
+## 2026-08-15 — v2.0.0
+
+- Replaced session-carried roles with database-backed access profiles, exact Supplier, Investor, Payer, and sole-admin authorization, plus record-level supplier, investor, and payer scopes.
+- Added audited admin role preview with fixed synthetic personas, a persistent preview banner, and safeguards against real-record or external side effects.
+- Added public non-admin registration, verification and password reset tokens, Google onboarding for every public role, and Factorio-only one-click demo accounts.
+- Added Governance Team invitations and role management, including payer-company linkage, and refreshed all 11 enabled language catalogues.
+- Applied the additive access-control migration to DATABASE_URL_PROD and added Postmark/public-URL production configuration.
+- Migrated and table-by-table verified all 33 legacy Factorio tables and 791 synthetic rows on DATABASE_URL_PROD; removed the remaining legacy marketplace-brand documents and references.
+
 ## 2026-08-15 — v1.1.1
 
 - Added trusted dual-brand Google OAuth callback selection for FastFactoring and Factorio, with host-header fallback protection.

@@ -11,21 +11,23 @@ rather than mutating synthetic data destructively.
 
 from __future__ import annotations
 
+import hmac
 from datetime import date, datetime
 
 from fasthtml.common import (
     Div, P, Span, A, Article, Table, Thead, Tbody, Tr, Th, Td, NotStr, Titled,
-    Form, Select, Option, Button, Img,
+    Form, Select, Option, Button, Img, Input,
 )
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 
 from app import rt
 from utils.i18n import t, get_lang
 from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, fmt_uzs, current_role, current_subrole
+from utils.access import context_for
 
 try:
-    from db import fetch_all, fetch_one, execute
+    from db import connect, fetch_all, fetch_one, execute
     _HAS_DB = True
 except Exception:  # pragma: no cover
     _HAS_DB = False
@@ -325,8 +327,12 @@ def admin_funding(req):
     rows = []
     for p in pipeline:
         adv = fmt_uzs(float(p["amount"] or 0) * float(p["advance_rate_pct"] or 85) / 100)
-        action = (A("Approve & release", href=f"/app/admin/funding/approve?inv={p['invoice_number']}",
-                    cls="text-xs px-3 py-1 rounded-full bg-accent text-bg hover:bg-ink")
+        action = (Form(
+                    Input(type="hidden", name="inv", value=p["invoice_number"]),
+                    Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                    Button("Approve & release", type="submit",
+                           cls="text-xs px-3 py-1 rounded-full bg-accent text-bg hover:bg-ink"),
+                    method="post", action="/app/admin/funding/approve")
                   if can_approve else Span("—", cls="text-ink-dim text-xs"))
         rows.append(Tr(
             Td(p["invoice_number"], cls=_TD), Td(p["debtor_name"], cls=_TD),
@@ -355,19 +361,44 @@ def admin_funding(req):
                            _table(["Invoice", "Debtor", "Amount", "Due", "Stage"], coll_rows)))
 
 
-@rt("/app/admin/funding/approve")
-def admin_funding_approve(req, inv: str = ""):
+@rt("/app/admin/funding/approve", methods=["POST"])
+def admin_funding_approve(req, inv: str = "", csrf: str = ""):
     g = _guard(req)
     if g:
         return g
     lang = get_lang(req)
     subrole = current_subrole(req)
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     if subrole not in CAN_APPROVE_FUNDING:
         msg = P(t("admin_restricted", lang), cls="text-red-700")
     else:
-        log_action("admin", subrole, "funding.release", f"invoice {inv}", "approved via console")
-        msg = P(NotStr(f"✔ Funding for <b>{inv}</b> approved and released. Action written to the audit log."),
-                cls="text-ink")
+        released = False
+        if _HAS_DB:
+            try:
+                with connect() as conn, conn.transaction():
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """UPDATE factorio.invoices SET status='funded'
+                                  WHERE invoice_number=%s AND status IN ('verified','funding')
+                              RETURNING id""",
+                            (inv,),
+                        )
+                        row = cur.fetchone()
+                        if row:
+                            cur.execute(
+                                "UPDATE factorio.invoice_funding SET funding_status='funded' WHERE invoice_id=%s",
+                                (row[0],),
+                            )
+                            released = True
+            except Exception:
+                released = False
+        if released:
+            log_action("admin", subrole, "funding.release", f"invoice {inv}", "approved via console")
+            msg = P(NotStr(f"✔ Funding for <b>{inv}</b> approved and released. Action written to the audit log."),
+                    cls="text-ink")
+        else:
+            msg = P("Funding was not released; the invoice was missing or no longer eligible.", cls="text-red-700")
     return _admin_page(req, "/app/admin/funding", "nav_admin_funding",
                        msg, P(A("← Back to funding", href="/app/admin/funding", cls="text-accent"), cls="mt-4"))
 
@@ -474,14 +505,19 @@ def admin_audit(req):
 
 @rt("/app/supplier")
 def supplier_home(req):
+    from utils.access import context_for
+    ctx = context_for(req)
+    if ctx.effective_role != "supplier" or not ctx.supplier_user_id:
+        return Response("No supplier profile is linked to this account.", status_code=403)
     lang = get_lang(req)
     apps = _q("""
         SELECT i.invoice_number, i.debtor_name, i.amount, i.risk_grade, i.status,
                f.id funding_id
         FROM factorio.invoices i
         LEFT JOIN factorio.invoice_funding f ON f.invoice_id=i.id
+        WHERE i.seller_id=%(seller)s
         ORDER BY i.id DESC LIMIT 12
-    """)
+    """, {"seller": ctx.supplier_user_id})
     rows = [Tr(Td(a["invoice_number"], cls=_TD), Td(a["debtor_name"], cls=_TD),
                Td(fmt_uzs(a["amount"]), cls=_TDR), Td(a["risk_grade"], cls="py-3 px-4 text-center text-sm"),
                Td(a["status"], cls=_TD),
@@ -507,17 +543,24 @@ def supplier_profile(req):
     if current_role(req) != "supplier":
         return RedirectResponse("/app", status_code=303)
     lang = get_lang(req)
+    from utils.access import context_for
+    ctx = context_for(req)
+    profile = _q("""SELECT c.name,c.registration_number,c.address,u.email
+                     FROM factorio.users u
+                     LEFT JOIN factorio.companies c ON c.id=%(company)s
+                     WHERE u.id=%(supplier)s""",
+                 {"company": ctx.company_id, "supplier": ctx.supplier_user_id}, one=True) or {}
     details = [
-        ("Company", "Northstar Office Supplies Ltd"),
-        ("Company number", "09876543"),
-        ("Registered address", "18 Meridian Way, Manchester M1 4AB, United Kingdom"),
-        ("Contact", "Amelia Hart · finance@northstar-demo.example"),
-        ("Bank", "Demo Commercial Bank"),
-        ("Account name", "Northstar Office Supplies Ltd"),
-        ("Sort code", "12-34-56"),
-        ("Account number", "87654321"),
-        ("IBAN", "GB29 DEMO 1234 5687 6543 21"),
-        ("SWIFT / BIC", "DEMOGB2L"),
+        ("Company", profile.get("name") or "Not linked"),
+        ("Company number", profile.get("registration_number") or "Not linked"),
+        ("Registered address", profile.get("address") or "Not provided"),
+        ("Contact", profile.get("email") or ctx.email),
+        ("Bank", "Not connected"),
+        ("Account name", profile.get("name") or "Not configured"),
+        ("Sort code", "Not configured"),
+        ("Account number", "Not configured"),
+        ("IBAN", "Not configured"),
+        ("SWIFT / BIC", "Not configured"),
     ]
     rows = [Tr(Td(label, cls=_TD + " text-ink-muted"),
                Td(value, cls=_TD + " font-medium"),
@@ -566,17 +609,37 @@ def supplier_profile(req):
 
 @rt("/app/payer")
 def payer_home(req):
+    from utils.access import context_for
+    ctx = context_for(req)
     lang = get_lang(req)
-    top = _q("SELECT debtor_name, COUNT(*) n FROM factorio.invoices GROUP BY debtor_name ORDER BY n DESC LIMIT 1", one=True)
-    debtor = (top or {}).get("debtor_name", "")
+    if ctx.effective_role != "payer":
+        return Response("Payer access required.", status_code=403)
+    if not ctx.payer_registration:
+        return app_page(
+            t("nav_payer", lang),
+            Section_(Eyebrow("Payer account"), Heading(1, "Organisation linkage pending", cls="mt-4"),
+                     P("Ask your administrator to link the company registration number whose invoices you may confirm.",
+                       cls="mt-4 text-ink-muted text-lg max-w-3xl"), cls="border-t border-line"),
+            current_path="/app/payer", lang=lang, role="payer")
+    top = _q("""SELECT debtor_name FROM factorio.invoices
+                 WHERE debtor_registration=%(registration)s ORDER BY id LIMIT 1""",
+             {"registration": ctx.payer_registration}, one=True)
+    debtor = (top or {}).get("debtor_name", ctx.payer_registration)
     invs = _q("""
-        SELECT invoice_number, amount, due_date, status FROM factorio.invoices
-        WHERE debtor_name = %(d)s ORDER BY due_date LIMIT 15
-    """, {"d": debtor})
+        SELECT invoice_number, amount, due_date, status, payer_decision FROM factorio.invoices
+        WHERE debtor_registration = %(registration)s ORDER BY due_date LIMIT 15
+    """, {"registration": ctx.payer_registration})
     rows = []
     for i in invs:
-        act = (Span("Confirmed", cls="text-xs text-green-700") if i["status"] != "submitted"
-               else Span("Confirm / dispute", cls="text-xs px-3 py-1 rounded-full bg-accent text-bg"))
+        decision = str(i.get("payer_decision") or "")
+        act = (Span(decision.title(), cls="text-xs text-green-700") if decision
+               else Form(Input(type="hidden", name="csrf", value=ctx.csrf_token),
+                         Input(type="hidden", name="invoice_number", value=i["invoice_number"]),
+                         Button("Confirm", name="decision", value="confirmed", type="submit",
+                                cls="text-xs px-2 py-1 rounded bg-accent text-white"),
+                         Button("Dispute", name="decision", value="disputed", type="submit",
+                                cls="text-xs px-2 py-1 rounded border border-line ml-1"),
+                         action="/app/payer/invoice-action", method="post"))
         rows.append(Tr(Td(i["invoice_number"], cls=_TD), Td(fmt_uzs(i["amount"]), cls=_TDR),
                        Td(str(i["due_date"]), cls=_TD), Td(i["status"], cls=_TD),
                        Td(_view_btn(i["invoice_number"], debtor), cls="py-3 px-4"),
@@ -591,3 +654,29 @@ def payer_home(req):
         Section_(_table(["Invoice", "Amount", "Due", "Status", "Document", ""], rows), cls="border-t border-line"),
         current_path="/app/payer", lang=lang, role="payer",
     )
+
+
+@rt("/app/payer/invoice-action", methods=["POST"])
+def payer_invoice_action(req, invoice_number: str = "", decision: str = "", csrf: str = ""):
+    import hmac
+    from utils.access import audit, context_for
+    ctx = context_for(req)
+    expected = str(req.session.get("csrf_token") or "")
+    if (ctx.effective_role != "payer" or decision not in {"confirmed", "disputed"}
+            or not expected or not hmac.compare_digest(expected, csrf)):
+        return Response("Forbidden", status_code=403)
+    synthetic_clause = " AND is_synthetic=TRUE" if ctx.preview else ""
+    updated = fetch_one(
+        f"""UPDATE factorio.invoices SET payer_decision=%(decision)s,
+                payer_decided_at=now(),updated_at=now()
+              WHERE invoice_number=%(invoice)s AND debtor_registration=%(registration)s
+              {synthetic_clause} RETURNING id""",
+        {"decision": decision, "invoice": invoice_number,
+         "registration": ctx.payer_registration},
+    )
+    if not updated:
+        audit(ctx, "payer_decision_denied", invoice_number, decision)
+        return Response("Invoice not found", status_code=404)
+    audit(ctx, "payer_invoice_" + decision, invoice_number,
+          f"actual={ctx.actual_role};effective={ctx.effective_role};preview={ctx.preview}")
+    return RedirectResponse("/app/payer", status_code=303)

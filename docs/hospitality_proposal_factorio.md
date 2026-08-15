@@ -27,7 +27,7 @@ networks, and into short-term, asset-backed returns for investors.
 - **Multi-currency & cross-border.** Built for EUR / USD / GBP and local
   currencies — the norm in a sector with international guests, groups and imports.
 - **For investors.** Short-duration, sector-diversified, asset-backed exposure
-  with target net returns in the low-to-mid teens (Investly's comparable book
+  with target net returns in the low-to-mid teens (the legacy marketplace's comparable book
   ran ~13% realised net return at a 0% default rate on verified receivables).
 
 
@@ -81,7 +81,7 @@ notification model (disclosed vs confidential) change.
   settlements. *(Live prototype.)*
 - **Open-banking-style credit scoring.** Fuses accounting data, bank-transaction
   cash-flow signals and bureau data to score **both the supplier and the debtor**,
-  with model back-testing (actual vs expected default) — Investly's discipline.
+  with model back-testing (actual vs expected default) — the legacy marketplace's discipline.
 - **Reverse-auction pricing.** Investors bid rate + amount; the supplier gets the
   lowest available cost of funds. Fixed-rate offers also supported.
 - **Multi-currency.** EUR / USD / GBP / local, per-facility base currency, FX for
@@ -140,7 +140,7 @@ flowchart LR
 
 <div class="pagebreak"></div>
 
-## 7. Pricing & returns (illustrative, Investly-informed)
+## 7. Pricing & returns (illustrative, market-informed)
 
 | Party | Economics |
 |---|---|
@@ -151,7 +151,7 @@ flowchart LR
 | **Platform (Consistente)** | Volume-based basis points — paid only on financed volume; no SaaS licence |
 
 Reverse-auction competition drives the supplier's cost toward the floor while
-still clearing investor demand — the mechanism that let Investly undercut both
+still clearing investor demand — the mechanism that let legacy marketplace undercut both
 banks and first-generation invoice-trading platforms.
 
 
@@ -268,4 +268,4 @@ An end-to-end tour of the platform. Screens are shown in Appendix B.
 ---
 
 *Consistente Ltd · Factorio · consistente.tech — figures are illustrative and,
-where noted, drawn from comparable Investly disclosures; not a binding offer.*
+where noted, drawn from comparable legacy marketplace disclosures; not a binding offer.*

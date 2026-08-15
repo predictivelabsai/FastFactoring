@@ -8,13 +8,16 @@ CRM deals advance stage, mail messages mark read — so state survives restarts.
 
 from __future__ import annotations
 
-from fasthtml.common import Div, P, Span, A, H3, NotStr
+import hmac
+
+from fasthtml.common import Div, P, Span, A, Button, Form, H3, Input, NotStr
 from starlette.responses import RedirectResponse
 
 from app import rt
 from utils.i18n import get_lang
 from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, current_role, current_subrole
+from utils.access import context_for
 
 try:
     from db import fetch_all, fetch_one, execute
@@ -191,8 +194,13 @@ def crm(req):
             v = float(d["value"])
             advance = None
             if can_edit and next_stage:
-                advance = A(NotStr(f"→ {next_stage}"), href=f"/app/crm/advance?deal_id={d['id']}",
-                            cls="text-[11px] text-accent hover:underline mt-2 inline-block")
+                advance = Form(
+                    Input(type="hidden", name="deal_id", value=d["id"]),
+                    Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+                    Button(NotStr(f"→ {next_stage}"), type="submit",
+                           cls="text-[11px] text-accent hover:underline mt-2 inline-block"),
+                    method="post", action="/app/crm/advance",
+                )
             cards.append(Div(
                 Div(Span("", cls="inline-block w-2 h-2 rounded-full mr-2 align-middle",
                          style=f"background:{_heat(v)}"),
@@ -225,8 +233,10 @@ def crm(req):
     )
 
 
-@rt("/app/crm/advance")
-def crm_advance(req, deal_id: int = 0):
+@rt("/app/crm/advance", methods=["POST"])
+def crm_advance(req, deal_id: int = 0, csrf: str = ""):
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     if current_role(req) == "admin" and _HAS_DB:
         row = fetch_one("SELECT stage FROM factorio.crm_deals WHERE id=%(i)s", {"i": deal_id})
         if row and row["stage"] in DEAL_STAGES:
@@ -309,17 +319,20 @@ def mail(req):
         pass
     msgs = _q("SELECT id,sender,subject,snippet,when_label,is_read FROM factorio.mail_messages ORDER BY sort_order")
     unread = sum(1 for m in msgs if not m["is_read"])
-    rows = [
-        A(Span("●", cls=("text-accent" if not m["is_read"] else "text-transparent") + " text-xs mr-3"),
-          Div(P(m["sender"], cls="text-sm font-medium text-ink"),
-              P(Span(m["subject"], cls="text-ink"), Span(" — " + m["snippet"], cls="text-ink-muted"),
-                cls="text-sm truncate"),
-              cls="flex-1 min-w-0"),
-          Span(m["when_label"], cls="text-[11px] text-ink-dim ml-3 whitespace-nowrap"),
-          href=f"/app/mail/read?msg_id={m['id']}",
-          cls="flex items-center py-3 px-4 border-b border-line hover:bg-bg-raised/40 no-underline text-inherit")
-        for m in msgs
-    ]
+    rows = [Form(
+        Input(type="hidden", name="msg_id", value=m["id"]),
+        Input(type="hidden", name="csrf", value=context_for(req).csrf_token),
+        Button(
+            Span("●", cls=("text-accent" if not m["is_read"] else "text-transparent") + " text-xs mr-3"),
+            Div(P(m["sender"], cls="text-sm font-medium text-ink"),
+                P(Span(m["subject"], cls="text-ink"), Span(" — " + m["snippet"], cls="text-ink-muted"),
+                  cls="text-sm truncate"), cls="flex-1 min-w-0"),
+            Span(m["when_label"], cls="text-[11px] text-ink-dim ml-3 whitespace-nowrap"),
+            type="submit",
+            cls="w-full flex items-center py-3 px-4 border-b border-line hover:bg-bg-raised/40 text-left",
+        ),
+        method="post", action="/app/mail/read",
+    ) for m in msgs]
     return app_page(
         "Mail",
         Section_(Eyebrow("Workspace · Mail"),
@@ -375,8 +388,10 @@ def mail_templates(req):
     )
 
 
-@rt("/app/mail/read")
-def mail_read(req, msg_id: int = 0):
+@rt("/app/mail/read", methods=["POST"])
+def mail_read(req, msg_id: int = 0, csrf: str = ""):
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     if _HAS_DB:
         try:
             execute("UPDATE factorio.mail_messages SET is_read=TRUE WHERE id=%(i)s", {"i": msg_id})

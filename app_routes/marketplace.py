@@ -10,6 +10,7 @@ from __future__ import annotations
 from fasthtml.common import (
     Div, H3, P, Span, A, Article, Form, Input, Select, Option, Button, Label, NotStr,
 )
+from starlette.responses import RedirectResponse
 
 from app import rt
 from utils.i18n import t, get_lang
@@ -17,7 +18,7 @@ from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, list_investors, current_investor, current_role
 
 try:
-    from db import fetch_all
+    from db import connect, fetch_all
     _HAS_DB = True
 except Exception:
     _HAS_DB = False
@@ -257,6 +258,8 @@ def marketplace_detail(req, funding_id: int):
             JOIN factorio.invoices i ON i.id = f.invoice_id
             JOIN factorio.companies c ON c.id = i.company_id
             WHERE f.id = %s
+              AND f.funding_status = 'open'
+              AND f.show_in_marketplace = TRUE
         """, (funding_id,))
     except Exception:
         row = []
@@ -289,6 +292,23 @@ def marketplace_detail(req, funding_id: int):
         ),
         cls="p-6 rounded-2xl bg-bg-elevated border border-line",
     )
+    invest_form = None
+    if investor:
+        from utils.access import context_for
+        ctx = context_for(req)
+        remaining = max(0, float(r["funding_goal"]) - float(r["amount_raised"]))
+        if remaining > 0:
+            invest_form = Form(
+                Label("Investment amount", cls="text-sm text-ink-muted"),
+                Input(type="number", name="amount", min="1", max=str(remaining),
+                      value=str(min(remaining, max(50, float(r["minimum_investment"] or 50)))),
+                      step="0.01", required=True, cls=_INPUT),
+                Input(type="hidden", name="funding_id", value=funding_id),
+                Input(type="hidden", name="csrf", value=ctx.csrf_token),
+                Button("Invest", type="submit",
+                       cls="mt-3 px-5 py-2 rounded-full bg-accent text-white"),
+                action="/app/marketplace/invest", method="post",
+                cls="mt-6 max-w-sm")
 
     return app_page(
         f"{r['debtor_name']}",
@@ -323,6 +343,7 @@ def marketplace_detail(req, funding_id: int):
                         _detail(t("mkt_est_return", lang), f"{float(r['estimated_return_pct']):.1f}%"),
                         cls="grid grid-cols-2 md:grid-cols-4 gap-6",
                     ),
+                    invest_form,
                     cls="md:col-span-2",
                 ),
                 debtor_profile,
@@ -332,3 +353,53 @@ def marketplace_detail(req, funding_id: int):
         ),
         current_path="/app/marketplace", lang=lang, role=current_role(req), investor=investor, investors=investors,
     )
+
+
+@rt("/app/marketplace/invest", methods=["POST"])
+def marketplace_invest(req, funding_id: int = 0, amount: float = 0, csrf: str = ""):
+    import hmac
+    from utils.access import audit, context_for
+    ctx = context_for(req)
+    investor = current_investor(req, list_investors())
+    expected = str(req.session.get("csrf_token") or "")
+    if (ctx.effective_role != "investor" or not investor or amount <= 0 or
+            not expected or not hmac.compare_digest(expected, csrf)):
+        return RedirectResponse("/app", status_code=303)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT f.funding_goal,f.amount_raised,f.estimated_return_pct,
+                                  i.is_synthetic
+                             FROM factorio.invoice_funding f
+                             JOIN factorio.invoices i ON i.id=f.invoice_id
+                            WHERE f.id=%s AND f.funding_status='open'
+                              AND f.show_in_marketplace=TRUE
+                            FOR UPDATE""", (funding_id,))
+            row = cur.fetchone()
+            if not row or (ctx.preview and not row[3]):
+                conn.rollback()
+                audit(ctx, "investment_denied", str(funding_id), "target_not_synthetic_or_open")
+                return RedirectResponse("/app/marketplace", status_code=303)
+            remaining = float(row[0]) - float(row[1])
+            placed = min(float(amount), remaining)
+            if placed <= 0:
+                conn.rollback()
+                return RedirectResponse(f"/app/marketplace/{funding_id}", status_code=303)
+            expected_return = placed * float(row[2]) / 100
+            ownership = placed / float(row[0]) * 100 if row[0] else 0
+            cur.execute("""INSERT INTO factorio.investments(
+                              funding_id,investor_id,investment_amount,ownership_pct,
+                              expected_return_amount,status)
+                           VALUES (%s,%s,%s,%s,%s,'confirmed')
+                           ON CONFLICT(funding_id,investor_id) DO UPDATE SET
+                             investment_amount=factorio.investments.investment_amount+EXCLUDED.investment_amount,
+                             ownership_pct=factorio.investments.ownership_pct+EXCLUDED.ownership_pct,
+                             expected_return_amount=factorio.investments.expected_return_amount+EXCLUDED.expected_return_amount,
+                             status='confirmed',updated_at=now()""",
+                        (funding_id, investor["id"], placed, ownership, expected_return))
+            cur.execute("""UPDATE factorio.invoice_funding SET amount_raised=amount_raised+%s,
+                              funding_status=CASE WHEN amount_raised+%s>=funding_goal THEN 'funded' ELSE funding_status END
+                            WHERE id=%s""", (placed, placed, funding_id))
+        conn.commit()
+    audit(ctx, "investment_created", str(funding_id),
+          f"amount={placed};preview={ctx.preview};investor={investor['id']}")
+    return RedirectResponse("/app/portfolio", status_code=303)

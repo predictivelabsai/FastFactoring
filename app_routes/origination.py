@@ -158,16 +158,36 @@ def _decode_document(file_data: str, filename: str, mime_type: str) -> dict:
     raise ValueError("Supported invoice formats are PDF, PNG, JPEG, JSON, and TXT.")
 
 
-def _create_demand(data: dict) -> int:
+def _create_demand(data: dict, req) -> int:
     """Create the invoice and its open financing demand in one transaction."""
+    from utils.access import context_for, preview_side_effect_allowed
+    ctx = context_for(req)
+    if ctx.effective_role != "supplier" or not ctx.supplier_user_id:
+        raise ValueError("A supplier profile must be linked before creating an application.")
+    if not preview_side_effect_allowed(ctx):
+        raise ValueError("Role preview can write only to the synthetic scenario corpus.")
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM factorio.users WHERE role='seller' ORDER BY id LIMIT 1")
-            seller = cur.fetchone()
-            cur.execute("SELECT id FROM factorio.companies ORDER BY id LIMIT 1")
-            company = cur.fetchone()
-            if not seller or not company:
-                raise ValueError("Seed seller and company records before uploading.")
+            seller_id = ctx.supplier_user_id
+            company_id = ctx.company_id
+            if ctx.preview and not company_id:
+                raise ValueError("The synthetic Supplier preview has no linked company.")
+            if not company_id:
+                registration = str(data.get("supplier_registration") or "").strip()
+                if not registration:
+                    registration = "SELF-" + str(seller_id)
+                cur.execute(
+                    """INSERT INTO factorio.companies(name,registration_number,sector,country,address)
+                       VALUES (%s,%s,%s,'GB',%s)
+                       ON CONFLICT(registration_number) DO UPDATE SET name=EXCLUDED.name
+                       RETURNING id""",
+                    (data.get("supplier_name") or ctx.name or "Supplier", registration,
+                     data.get("sector") or "other", data.get("supplier_registered_address") or ""),
+                )
+                company_id = cur.fetchone()[0]
+                if not ctx.preview:
+                    cur.execute("UPDATE factorio.access_profiles SET company_id=%s,updated_at=now() WHERE email=%s",
+                                (company_id, ctx.email))
             terms = int((data.get("financing") or {}).get(
                 "period_days", (data["due_date"] - data["issue_date"]).days))
             cur.execute("""
@@ -179,11 +199,12 @@ def _create_demand(data: dict) -> int:
                      supplier_director_name, supplier_contact_email, supplier_contact_phone,
                      supplier_tax_id, supplier_bank_name,
                      supplier_bank_account, supplier_iban, supplier_swift,
-                     purchase_order_number, extraction_confidence, extraction_evidence)
+                     purchase_order_number, extraction_confidence, extraction_evidence,
+                     is_synthetic)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'funding',%s,
-                        %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
-            """, (data["invoice_number"], seller[0], company[0], data["debtor_name"],
+            """, (data["invoice_number"], seller_id, company_id, data["debtor_name"],
                   data.get("debtor_registration") or "", data.get("description") or "",
                   data.get("sector") or "other", data["amount"], data["currency"].upper(),
                   data["issue_date"], data["due_date"], terms, data["risk_grade"],
@@ -195,7 +216,8 @@ def _create_demand(data: dict) -> int:
                   data.get("supplier_tax_id") or "", data.get("supplier_bank_name") or "",
                   data.get("supplier_bank_account") or "", data.get("supplier_iban") or "",
                   data.get("supplier_swift") or "", data.get("purchase_order_number") or "",
-                  data.get("confidence"), json.dumps(data.get("_evidence_log", []))))
+                  data.get("confidence"), json.dumps(data.get("_evidence_log", [])),
+                  ctx.preview))
             invoice_id = cur.fetchone()[0]
             cur.execute("""
                 INSERT INTO factorio.invoice_funding
@@ -482,7 +504,7 @@ def supplier_chat_accept(req):
         )
     try:
         data = _parse(json.dumps(extracted))
-        funding_id = _create_demand(data)
+        funding_id = _create_demand(data, req)
         _PENDING_OFFERS.pop(token, None)
         req.session.pop("supplier_offer_token", None)
         contract = f"/app/supplier/contract/{funding_id}"
@@ -502,13 +524,15 @@ def supplier_contract(req, funding_id: int):
     if current_role(req) != "supplier":
         return RedirectResponse("/app", status_code=303)
     from db import fetch_one
+    from utils.access import context_for
+    ctx = context_for(req)
     row = fetch_one("""
         SELECT i.invoice_number, i.supplier_name, i.debtor_name, i.amount, i.currency,
                i.issue_date, i.due_date, f.id funding_id, f.funding_goal,
                f.advance_rate_pct, f.fee_pct_per_30d
         FROM factorio.invoice_funding f JOIN factorio.invoices i ON i.id=f.invoice_id
-        WHERE f.id=%(f)s
-    """, {"f": funding_id})
+        WHERE f.id=%(f)s AND i.seller_id=%(seller)s
+    """, {"f": funding_id, "seller": ctx.supplier_user_id})
     if not row:
         return Response("Contract not found", status_code=404)
     from fpdf import FPDF
@@ -653,7 +677,7 @@ def seller_origination_post(req, payload: str = ""):
         return RedirectResponse("/app", status_code=303)
     try:
         data = _parse(payload)
-        funding_id = _create_demand(data)
+        funding_id = _create_demand(data, req)
         return _page(req, f"Created financing demand #{funding_id} for {data['invoice_number']}.")
     except Exception as exc:  # validation and database constraint errors are shown in the demo UI
         return _page(req, error=str(exc), payload=payload)

@@ -7,17 +7,46 @@ Single process, two route groups:
 
 from __future__ import annotations
 
+import hmac
+from urllib.parse import urlsplit
+
 from fasthtml.common import Beforeware, fast_app, serve
-from starlette.responses import PlainTextResponse, RedirectResponse
+from starlette.responses import PlainTextResponse, RedirectResponse, Response
 
 from utils.config import settings
+from utils.access import audit, context_for, path_allowed, preview_request_allowed
 from utils.i18n import DEFAULT_LANG, enabled_languages, safe_return_path
 
 
 def _require_app_login(req, sess):
-    """Keep every product and admin endpoint behind the shared sign-in flow."""
-    if req.url.path.startswith("/app") and not sess.get("uid"):
+    """Load DB-backed authority and fail closed before every product route."""
+    ctx = context_for(req)
+    if not req.url.path.startswith("/app"):
+        return None
+    if not ctx.authenticated:
+        if sess.get("uid") and ctx.status == "pending":
+            return RedirectResponse("/choose-role", status_code=303)
+        sess.clear()
         return RedirectResponse("/login", status_code=303)
+    if not path_allowed(ctx, req.url.path):
+        audit(ctx, "access_denied", req.url.path,
+              f"actual={ctx.actual_role};effective={ctx.effective_role}")
+        return Response("This page is not available for your role.", status_code=403)
+    if not preview_request_allowed(ctx, req.url.path, req.method):
+        audit(ctx, "preview_write_denied", req.url.path,
+              f"actual={ctx.actual_role};effective={ctx.effective_role}")
+        return Response("This action is disabled in role preview.", status_code=403)
+    if req.method.upper() not in {"GET", "HEAD", "OPTIONS"}:
+        supplied = req.headers.get("x-csrf-token", "")
+        expected = str(sess.get("csrf_token") or "")
+        host = (req.headers.get("x-forwarded-host") or req.headers.get("host") or "").split(",", 1)[0]
+        source = req.headers.get("origin") or req.headers.get("referer") or ""
+        source_host = urlsplit(source).netloc
+        same_origin = bool(host and source_host and host.lower() == source_host.lower())
+        token_ok = bool(expected and supplied and hmac.compare_digest(expected, supplied))
+        if not (token_ok or same_origin):
+            audit(ctx, "csrf_denied", req.url.path, req.method)
+            return Response("Invalid request origin.", status_code=403)
 
 app, rt = fast_app(
     live=False,
@@ -74,4 +103,5 @@ from app_routes import depth as _depth_routes  # noqa: E402,F401
 from app_routes import pdf_viewer as _pdf_viewer_routes  # noqa: E402,F401
 from app_routes import agents as _agents_routes  # noqa: E402,F401
 from app_routes import languages as _language_routes  # noqa: E402,F401
+from app_routes import team as _team_routes  # noqa: E402,F401
 from app_routes import shell as _shell_routes  # noqa: E402,F401

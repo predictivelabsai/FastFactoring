@@ -126,6 +126,18 @@ def clone(source: str, target: str) -> None:
             "WHERE role='admin' AND lower(email)<>%s",
             (ADMIN_EMAIL,),
         )
+        connection.execute(
+            "UPDATE factorio.app_users SET role='supplier',subrole='ops' "
+            "WHERE role IN ('seller','borrower')"
+        )
+        connection.execute(
+            "UPDATE factorio.app_users SET role='investor',subrole='ops' "
+            "WHERE role NOT IN ('investor','payer','supplier','admin')"
+        )
+        connection.execute(
+            "UPDATE factorio.access_profiles p SET role=u.role,updated_at=now() "
+            "FROM factorio.app_users u WHERE p.email=u.email AND p.role<>u.role"
+        )
         connection.execute("ALTER TABLE factorio.app_users DROP CONSTRAINT IF EXISTS app_users_role_check")
         connection.execute(
             "ALTER TABLE factorio.app_users ADD CONSTRAINT app_users_role_check "

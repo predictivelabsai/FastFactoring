@@ -27,7 +27,7 @@ from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, list_investors, current_investor, current_role
 
 try:
-    from db import fetch_all, fetch_one, execute
+    from db import connect, fetch_all, fetch_one, execute
     _HAS_DB = True
 except Exception:  # pragma: no cover
     _HAS_DB = False
@@ -142,9 +142,22 @@ async def auctions_bid(req, funding_id: int = 0, bid_fee_pct: float = 0.0, bid_a
     if _HAS_DB and investor and funding_id and 0 <= bid_fee_pct <= 100 and 0 <= bid_advance_pct <= 100:
         try:
             _ensure()
-            execute("""INSERT INTO factorio.auction_bids (funding_id,investor_id,bid_fee_pct,bid_advance_pct)
-                       VALUES (%(f)s,%(i)s,%(fee)s,%(adv)s)""",
-                    {"f": funding_id, "i": investor["id"], "fee": bid_fee_pct, "adv": bid_advance_pct})
+            with connect() as conn, conn.transaction():
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT id FROM factorio.invoice_funding
+                             WHERE id=%s AND funding_status='open'
+                               AND show_in_marketplace=TRUE
+                             FOR UPDATE""",
+                        (funding_id,),
+                    )
+                    if cur.fetchone():
+                        cur.execute(
+                            """INSERT INTO factorio.auction_bids
+                                      (funding_id,investor_id,bid_fee_pct,bid_advance_pct)
+                               VALUES (%s,%s,%s,%s)""",
+                            (funding_id, investor["id"], bid_fee_pct, bid_advance_pct),
+                        )
         except Exception:
             pass
     return RedirectResponse("/app/marketplace/auctions", status_code=303)
@@ -188,9 +201,11 @@ def secondary(req):
         Td(f"{float(r['estimated_return_pct']):.1f}%", cls=_TD + " text-accent"),
         Td(r["seller"], cls=_TD + " text-ink-muted"),
         Td(fmt_money(float(r["listing_price"])), cls=_TD + " font-medium"),
-        Td(A("Buy", href=f"/app/marketplace/secondary/buy?listing_id={r['id']}",
-             cls="text-xs px-3 py-1 rounded-full " +
-                 ("bg-accent text-bg" if r["seller_id"] != (investor or {}).get("id") else "border border-line text-ink-dim pointer-events-none")),
+        Td(Form(Input(type="hidden", name="listing_id", value=r["id"]),
+                Input(type="hidden", name="csrf", value=__import__("utils.access", fromlist=["context_for"]).context_for(req).csrf_token),
+                Button("Buy", type="submit", cls="text-xs px-3 py-1 rounded-full " +
+                       ("bg-accent text-bg" if r["seller_id"] != (investor or {}).get("id") else "border border-line text-ink-dim pointer-events-none")),
+                action="/app/marketplace/secondary/buy", method="post"),
            cls="py-3 px-4"),
         cls="border-b border-line") for r in listed]
     listed_tbl = _table(["Debtor", "Sector", "Face value", "Est. return", "Seller", "Ask", ""], listed_rows) \
@@ -248,19 +263,37 @@ async def secondary_list(req, investment_id: int = 0, price: float = 0.0):
     return RedirectResponse("/app/marketplace/secondary", status_code=303)
 
 
-@rt("/app/marketplace/secondary/buy")
-def secondary_buy(req, listing_id: int = 0):
+@rt("/app/marketplace/secondary/buy", methods=["POST"])
+def secondary_buy(req, listing_id: int = 0, csrf: str = ""):
+    import hmac
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     investors = list_investors()
     investor = current_investor(req, investors)
     if _HAS_DB and investor and listing_id:
         try:
-            lst = fetch_one("SELECT investor_id, investment_id FROM factorio.secondary_market "
-                            "WHERE id=%(l)s AND status='listed'", {"l": listing_id})
-            if lst and lst["investor_id"] != investor["id"]:
-                # transfer ownership, mark listing sold
-                execute("UPDATE factorio.investments SET investor_id=%(v)s, updated_at=now() WHERE id=%(i)s",
-                        {"v": investor["id"], "i": lst["investment_id"]})
-                execute("UPDATE factorio.secondary_market SET status='sold' WHERE id=%(l)s", {"l": listing_id})
+            with connect() as conn, conn.transaction():
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT investor_id,investment_id FROM factorio.secondary_market
+                             WHERE id=%s AND status='listed' FOR UPDATE""",
+                        (listing_id,),
+                    )
+                    listing = cur.fetchone()
+                    if listing and listing[0] != investor["id"]:
+                        cur.execute(
+                            "UPDATE factorio.secondary_market SET status='sold' WHERE id=%s AND status='listed'",
+                            (listing_id,),
+                        )
+                        if cur.rowcount != 1:
+                            raise RuntimeError("secondary listing was already claimed")
+                        cur.execute(
+                            """UPDATE factorio.investments SET investor_id=%s,updated_at=now()
+                                 WHERE id=%s AND investor_id=%s""",
+                            (investor["id"], listing[1], listing[0]),
+                        )
+                        if cur.rowcount != 1:
+                            raise RuntimeError("secondary investment owner changed")
         except Exception:
             pass
     return RedirectResponse("/app/marketplace/secondary", status_code=303)

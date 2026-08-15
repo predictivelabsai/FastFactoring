@@ -9,7 +9,9 @@ Credit/Compliance/Super set limits) and written to the audit log.
 
 from __future__ import annotations
 
-from fasthtml.common import Div, P, Span, A, Table, Thead, Tbody, Tr, Th, Td, NotStr
+import hmac
+
+from fasthtml.common import Div, P, Span, A, Button, Form, Input, Table, Thead, Tbody, Tr, Th, Td, NotStr
 from starlette.responses import RedirectResponse
 
 from app import rt
@@ -17,6 +19,7 @@ from utils.i18n import t, get_lang
 from landing.components import Eyebrow, Heading, Section_
 from app_routes._shared import app_page, fmt_uzs, current_role, current_subrole
 from app_routes.admin import log_action
+from utils.access import context_for
 
 try:
     from db import fetch_all, fetch_one, execute
@@ -157,11 +160,22 @@ def onboarding(req):
         st = r["status"]
         actions = Span("—", cls="text-ink-dim text-xs")
         if can and st in ("submitted", "in_review"):
-            actions = Span(
-                A("Approve", href=f"/app/admin/onboarding/act?subject={r['subject']}&decision=approved",
-                  cls="text-xs px-2 py-1 rounded-full bg-accent text-bg mr-1"),
-                A("Reject", href=f"/app/admin/onboarding/act?subject={r['subject']}&decision=rejected",
-                  cls="text-xs px-2 py-1 rounded-full border border-line text-ink"))
+            csrf = context_for(req).csrf_token
+            actions = Div(
+                Form(Input(type="hidden", name="subject", value=r["subject"]),
+                     Input(type="hidden", name="decision", value="approved"),
+                     Input(type="hidden", name="csrf", value=csrf),
+                     Button("Approve", type="submit",
+                            cls="text-xs px-2 py-1 rounded-full bg-accent text-bg"),
+                     method="post", action="/app/admin/onboarding/act"),
+                Form(Input(type="hidden", name="subject", value=r["subject"]),
+                     Input(type="hidden", name="decision", value="rejected"),
+                     Input(type="hidden", name="csrf", value=csrf),
+                     Button("Reject", type="submit",
+                            cls="text-xs px-2 py-1 rounded-full border border-line text-ink"),
+                     method="post", action="/app/admin/onboarding/act"),
+                cls="flex justify-end gap-1",
+            )
         rows.append(Tr(
             Td(r["subject"], cls=_TD),
             Td(Span(st.replace("_", " "), cls=f"px-2 py-0.5 rounded-full text-xs font-medium {_KYC_BADGE.get(st,'bg-gray-100')}"), cls="py-3 px-4"),
@@ -180,11 +194,13 @@ def onboarding(req):
                  P(A("Facility limits →", href="/app/admin/onboarding/limits", cls="text-accent"), cls="mt-3 text-sm"))
 
 
-@rt("/app/admin/onboarding/act")
-def onboarding_act(req, subject: str = "", decision: str = ""):
+@rt("/app/admin/onboarding/act", methods=["POST"])
+def onboarding_act(req, subject: str = "", decision: str = "", csrf: str = ""):
     g = _guard(req)
     if g:
         return g
+    if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
+        return RedirectResponse("/app", status_code=303)
     sub = current_subrole(req)
     if sub in CAN_APPROVE_KYC and decision in ("approved", "rejected") and _HAS_DB:
         execute("UPDATE factorio.kyc_cases SET status=%(s)s, reviewer=%(r)s, updated_at=now() WHERE subject=%(sub)s",

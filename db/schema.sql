@@ -68,6 +68,13 @@ ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS supplier_swift TEXT NOT N
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS purchase_order_number TEXT NOT NULL DEFAULT '';
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS extraction_confidence NUMERIC(5,2);
 ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS extraction_evidence TEXT NOT NULL DEFAULT '';
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS is_synthetic BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS payer_decision TEXT NOT NULL DEFAULT ''
+    CHECK (payer_decision IN ('','confirmed','disputed'));
+ALTER TABLE factorio.invoices ADD COLUMN IF NOT EXISTS payer_decided_at TIMESTAMPTZ;
+UPDATE factorio.invoices i SET is_synthetic=TRUE
+FROM factorio.users u
+WHERE i.seller_id=u.id AND u.email LIKE '%@factorio.co.uk';
 
 -- ── Invoice Funding (funding round per invoice) ────────────────────────
 CREATE TABLE IF NOT EXISTS factorio.invoice_funding (
@@ -248,6 +255,96 @@ CREATE TABLE IF NOT EXISTS factorio.app_users (
     role TEXT NOT NULL DEFAULT 'investor'
         CHECK (role IN ('investor', 'payer', 'supplier', 'admin')),
     subrole TEXT NOT NULL DEFAULT 'ops',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS id BIGSERIAL;
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS google_linked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE factorio.app_users ADD COLUMN IF NOT EXISTS session_version BIGINT NOT NULL DEFAULT 1;
+CREATE UNIQUE INDEX IF NOT EXISTS app_users_id_idx ON factorio.app_users(id);
+
+-- Authentication identity is deliberately separate from authorization and
+-- record scope. Sessions contain the account email only; every request reloads
+-- this profile before deciding what the user may see or change.
+CREATE TABLE IF NOT EXISTS factorio.access_profiles (
+    email              TEXT PRIMARY KEY REFERENCES factorio.app_users(email) ON DELETE CASCADE,
+    role               TEXT NOT NULL CHECK (role IN ('investor', 'payer', 'supplier', 'admin')),
+    company_id         BIGINT REFERENCES factorio.companies(id),
+    investor_user_id   BIGINT REFERENCES factorio.users(id),
+    supplier_user_id   BIGINT REFERENCES factorio.users(id),
+    payer_registration TEXT NOT NULL DEFAULT '',
+    is_synthetic       BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (role <> 'admin' OR lower(email) = 'kaljuvee@gmail.com')
+);
+INSERT INTO factorio.access_profiles (email, role, is_synthetic)
+SELECT email,
+       CASE WHEN lower(email) = 'kaljuvee@gmail.com' THEN 'admin'
+            WHEN role IN ('investor','payer','supplier') THEN role
+            ELSE 'investor' END,
+       email LIKE '%@factorio.co.uk'
+FROM factorio.app_users
+ON CONFLICT (email) DO NOTHING;
+
+-- Backfill stable subject scopes for upgraded accounts. Payer registrations
+-- require an explicit Team assignment and are never guessed from invoice data.
+UPDATE factorio.access_profiles p SET investor_user_id=u.id
+FROM factorio.users u
+WHERE p.email=u.email AND p.role='investor' AND u.role='investor'
+  AND p.investor_user_id IS NULL;
+UPDATE factorio.access_profiles p SET supplier_user_id=u.id
+FROM factorio.users u
+WHERE p.email=u.email AND p.role='supplier' AND u.role='seller'
+  AND p.supplier_user_id IS NULL;
+UPDATE factorio.access_profiles p SET company_id=i.company_id
+FROM factorio.invoices i
+WHERE p.role='supplier' AND p.supplier_user_id=i.seller_id AND p.company_id IS NULL;
+
+CREATE TABLE IF NOT EXISTS factorio.auth_tokens (
+    id         BIGSERIAL PRIMARY KEY,
+    email      TEXT NOT NULL REFERENCES factorio.app_users(email) ON DELETE CASCADE,
+    purpose    TEXT NOT NULL CHECK (purpose IN ('verify','reset','invite')),
+    token_hash TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at    TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS auth_tokens_lookup_idx
+    ON factorio.auth_tokens(token_hash, purpose, expires_at);
+
+CREATE TABLE IF NOT EXISTS factorio.auth_limits (
+    subject_hash TEXT NOT NULL,
+    action       TEXT NOT NULL,
+    window_start TIMESTAMPTZ NOT NULL,
+    attempts     INT NOT NULL DEFAULT 1,
+    PRIMARY KEY (subject_hash, action)
+);
+
+CREATE TABLE IF NOT EXISTS factorio.team_invitations (
+    id          BIGSERIAL PRIMARY KEY,
+    email       TEXT NOT NULL,
+    role        TEXT NOT NULL CHECK (role IN ('investor','payer','supplier')),
+    invited_by  TEXT NOT NULL,
+    token_hash  TEXT UNIQUE NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','accepted','revoked','expired')),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    accepted_at TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS team_invitations_email_idx
+    ON factorio.team_invitations(lower(email), status);
+
+CREATE TABLE IF NOT EXISTS factorio.audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    actor TEXT NOT NULL,
+    role TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity TEXT NOT NULL DEFAULT '',
+    detail TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

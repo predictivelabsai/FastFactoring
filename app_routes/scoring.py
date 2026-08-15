@@ -9,7 +9,7 @@ an indicative advance rate and price, and plain-language **adverse-action reason
 
 The differentiator is **model back-testing**: `calibration()` compares each
 grade's **expected** default probability with the **actual** default rate observed
-in the book — Investly's "credit-score accuracy" metric.
+in the book — the legacy marketplace's "credit-score accuracy" metric.
 
 Scoped to Admin + Credit / Compliance / Executive / Super (Credit owns scoring;
 Finance releases funds — segregation of duties).
