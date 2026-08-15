@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 
 from fasthtml.common import (
     Html, Head, Body, Meta, Title, Link, Script, Style, NotStr,
-    Div, Span, A, Button, Form, Input, Textarea, P, H2,
+    Div, Span, A, Button, Form, Input, Option, Select, Textarea, P, H2,
 )
 from starlette.responses import JSONResponse, StreamingResponse
 

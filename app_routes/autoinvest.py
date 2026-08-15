@@ -276,7 +276,7 @@ def auto_invest(req):
     if current_role(req) != "investor":
         return RedirectResponse("/app", status_code=303)
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     rule = _load_rule(investor["id"]) if investor else _load_rule(0)
     saved = req.query_params.get("saved") == "1"
@@ -310,7 +310,7 @@ def auto_invest(req):
 async def auto_invest_save(req):
     if current_role(req) != "investor":
         return RedirectResponse("/app", status_code=303)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     form = await req.form()
     if investor:

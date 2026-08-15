@@ -179,7 +179,7 @@ def _ledger_table(rows: list[dict], lang: str):
 @rt("/app/statement")
 def statement(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     fl = _parse_filters(req)
     rows = _load_ledger(investor["id"], fl) if investor else []
@@ -195,7 +195,7 @@ def statement(req):
 
 @rt("/app/statement/export")
 def statement_export(req):
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     fl = _parse_filters(req)
     rows = _load_ledger(investor["id"], fl) if investor else []

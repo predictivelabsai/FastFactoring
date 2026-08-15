@@ -69,7 +69,7 @@ def current_investor(req, investors: list[dict] | None = None) -> dict | None:
     Native admins may select a record for operational review; non-admin cookies
     are ignored and never change record scope.
     """
-    investors = investors if investors is not None else list_investors()
+    investors = investors if investors is not None else list_investors(req)
     if not investors:
         return None
     ctx = context_for(req) if req is not None else current_context()

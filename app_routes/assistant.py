@@ -125,7 +125,7 @@ def _parse_history(raw: str) -> list[dict]:
 @rt("/app/triage")
 def triage(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     return app_page(
         t("ai_triage_eyebrow", lang),
@@ -158,7 +158,7 @@ def triage_send(req, message: str = "", history: str = ""):
 @rt("/app/assistant")
 def assistant(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     return app_page(
         t("ai_assistant_eyebrow", lang),

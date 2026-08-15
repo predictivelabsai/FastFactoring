@@ -510,12 +510,13 @@ def supplier_home(req):
     if ctx.effective_role != "supplier" or not ctx.supplier_user_id:
         return Response("No supplier profile is linked to this account.", status_code=403)
     lang = get_lang(req)
-    apps = _q("""
+    synthetic_clause = " AND i.is_synthetic=TRUE" if ctx.is_synthetic else ""
+    apps = _q(f"""
         SELECT i.invoice_number, i.debtor_name, i.amount, i.risk_grade, i.status,
                f.id funding_id
         FROM factorio.invoices i
         LEFT JOIN factorio.invoice_funding f ON f.invoice_id=i.id
-        WHERE i.seller_id=%(seller)s
+        WHERE i.seller_id=%(seller)s{synthetic_clause}
         ORDER BY i.id DESC LIMIT 12
     """, {"seller": ctx.supplier_user_id})
     rows = [Tr(Td(a["invoice_number"], cls=_TD), Td(a["debtor_name"], cls=_TD),
@@ -665,7 +666,7 @@ def payer_invoice_action(req, invoice_number: str = "", decision: str = "", csrf
     if (ctx.effective_role != "payer" or decision not in {"confirmed", "disputed"}
             or not expected or not hmac.compare_digest(expected, csrf)):
         return Response("Forbidden", status_code=403)
-    synthetic_clause = " AND is_synthetic=TRUE" if ctx.preview else ""
+    synthetic_clause = " AND is_synthetic=TRUE" if ctx.is_synthetic else ""
     updated = fetch_one(
         f"""UPDATE factorio.invoices SET payer_decision=%(decision)s,
                 payer_decided_at=now(),updated_at=now()

@@ -16,7 +16,7 @@ from fasthtml.common import (
 from starlette.responses import RedirectResponse, Response
 
 from app import rt
-from landing.components import SITE_NAME, TAILWIND_CONFIG
+from landing.components import TAILWIND_CONFIG
 from utils import accounts, google_auth
 from utils.access import ADMIN_EMAIL, PUBLIC_ROLES, ROLES, context_for
 from utils.config import settings
@@ -135,6 +135,11 @@ def _is_factorio_host(req) -> bool:
     return host.split(",", 1)[0].split(":", 1)[0].lower() in {"factorio.co.uk", "www.factorio.co.uk"}
 
 
+def _site_name(req) -> str:
+    """Keep the open-source project and reference product brands distinct."""
+    return "Factorio" if _is_factorio_host(req) else "FastFactoring"
+
+
 def _field(label: str, name: str, *, type: str = "text", value: str = "", **kwargs):
     cls = ("w-full mt-1 px-4 py-2.5 rounded-xl border border-line-bright "
            "bg-bg-elevated text-ink focus:outline-none focus:border-accent")
@@ -158,6 +163,7 @@ def _demo_card():
 def _auth_page(req, *, mode: str = "login", error: str = "", message: str = "",
                email: str = "", invite: str = ""):
     lang, csrf = get_lang(req), _csrf(req)
+    site_name = _site_name(req)
     invited_role = accounts.invite_role(invite)
     roles = [("supplier", "Supplier"), ("investor", "Investor"), ("payer", "Payer")]
     login_form = Form(
@@ -189,7 +195,7 @@ def _auth_page(req, *, mode: str = "login", error: str = "", message: str = "",
         method="post", action="/forgot-password",
     )
     form = register_form if mode == "register" else forgot_form if mode == "forgot" else login_form
-    title = "Create your account" if mode == "register" else "Reset your password" if mode == "forgot" else f"Sign in to {SITE_NAME}"
+    title = "Create your account" if mode == "register" else "Reset your password" if mode == "forgot" else f"Sign in to {site_name}"
     tabs = Div(
         A("Sign in", href="/login", cls="text-accent" if mode == "login" else "text-ink-muted"),
         A("Register", href=f"/register{'?invite='+invite if invite else ''}", cls="text-accent" if mode == "register" else "text-ink-muted"),
@@ -208,7 +214,7 @@ def _auth_page(req, *, mode: str = "login", error: str = "", message: str = "",
     )
     return localize_tree(Html(
         Head(Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width,initial-scale=1"),
-             Title(f"{title} · {SITE_NAME}"), Link(rel="icon", href="/static/favicon.svg"),
+             Title(f"{title} · {site_name}"), Link(rel="icon", href="/static/favicon.svg"),
              Script(src="https://cdn.tailwindcss.com"), Script(NotStr(TAILWIND_CONFIG)),
              Link(rel="stylesheet", href="/static/site.css")),
         Body(Div(panel, cls="min-h-screen grid place-items-center bg-bg"), cls="font-sans"),

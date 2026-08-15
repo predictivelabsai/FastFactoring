@@ -192,6 +192,7 @@ def preview_side_effect_allowed(ctx: AccessContext) -> bool:
 
 
 _PREVIEW_WRITE_PATHS = {
+    "/app/role-preview", "/app/preview-exit",
     "/app/supplier/extract", "/app/supplier/details", "/app/supplier/change",
     "/app/supplier/accept", "/app/payer/invoice-action", "/app/chat/share",
     "/app/marketplace/invest",

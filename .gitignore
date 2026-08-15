@@ -219,6 +219,8 @@ __marimo__/
 
 # Playwright MCP
 .playwright-mcp/
+.playwright-cli/
+output/playwright/
 
 # Credentials — never commit (IONOS / SMTP / API secrets)
 config/credentials.yaml

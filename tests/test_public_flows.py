@@ -61,6 +61,18 @@ class PublicFlowTests(unittest.TestCase):
         self.assertIn("Factorio", response.text)
         self.assertIn('href="/login"', response.text)
 
+        login = self.client.get("/login", headers={"host": "factorio.co.uk"})
+        self.assertIn("Sign in to Factorio", login.text)
+        self.assertIn("Create your account · Factorio", self.client.get(
+            "/register", headers={"host": "factorio.co.uk"}).text)
+
+    def test_fastfactoring_auth_pages_keep_open_source_brand(self):
+        login = self.client.get("/login", headers={"host": "fastfactoring.org"})
+        self.assertIn("Sign in to FastFactoring", login.text)
+        self.assertIn("Sign in to FastFactoring · FastFactoring", login.text)
+        self.assertIn("Create your account · FastFactoring", self.client.get(
+            "/register", headers={"host": "fastfactoring.org"}).text)
+
     def test_health_probe_is_database_independent(self):
         response = self.client.get("/healthz")
         self.assertEqual(response.status_code, 200)

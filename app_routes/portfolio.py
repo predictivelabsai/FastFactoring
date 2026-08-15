@@ -274,7 +274,7 @@ def _positions_table(positions: list[dict], lang: str):
 @rt("/app/portfolio")
 def portfolio(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     positions = _load_positions(investor["id"]) if investor else []
     m = _compute(positions)

@@ -327,7 +327,13 @@ def demo_account(email: str, name: str, role: str) -> dict | None:
     with connect() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             _upsert_profile(cur, email, name, role, synthetic=True)
-            if role == "payer":
+            if role == "supplier":
+                cur.execute("""UPDATE factorio.access_profiles p SET company_id=(
+                                  SELECT company_id FROM factorio.invoices
+                                  WHERE seller_id=p.supplier_user_id AND is_synthetic=TRUE
+                                  ORDER BY id LIMIT 1)
+                               WHERE email=%s""", (email,))
+            elif role == "payer":
                 cur.execute("""UPDATE factorio.access_profiles SET payer_registration=(
                                   SELECT debtor_registration FROM factorio.invoices
                                   WHERE is_synthetic=TRUE AND debtor_registration<>'' ORDER BY id LIMIT 1)

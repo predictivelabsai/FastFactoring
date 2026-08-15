@@ -170,8 +170,8 @@ def _create_demand(data: dict, req) -> int:
         with conn.cursor() as cur:
             seller_id = ctx.supplier_user_id
             company_id = ctx.company_id
-            if ctx.preview and not company_id:
-                raise ValueError("The synthetic Supplier preview has no linked company.")
+            if ctx.is_synthetic and not company_id:
+                raise ValueError("The synthetic Supplier scenario has no linked company.")
             if not company_id:
                 registration = str(data.get("supplier_registration") or "").strip()
                 if not registration:
@@ -217,7 +217,7 @@ def _create_demand(data: dict, req) -> int:
                   data.get("supplier_bank_account") or "", data.get("supplier_iban") or "",
                   data.get("supplier_swift") or "", data.get("purchase_order_number") or "",
                   data.get("confidence"), json.dumps(data.get("_evidence_log", [])),
-                  ctx.preview))
+                  ctx.is_synthetic))
             invoice_id = cur.fetchone()[0]
             cur.execute("""
                 INSERT INTO factorio.invoice_funding
@@ -526,12 +526,13 @@ def supplier_contract(req, funding_id: int):
     from db import fetch_one
     from utils.access import context_for
     ctx = context_for(req)
-    row = fetch_one("""
+    synthetic_clause = " AND i.is_synthetic=TRUE" if ctx.is_synthetic else ""
+    row = fetch_one(f"""
         SELECT i.invoice_number, i.supplier_name, i.debtor_name, i.amount, i.currency,
                i.issue_date, i.due_date, f.id funding_id, f.funding_goal,
                f.advance_rate_pct, f.fee_pct_per_30d
         FROM factorio.invoice_funding f JOIN factorio.invoices i ON i.id=f.invoice_id
-        WHERE f.id=%(f)s AND i.seller_id=%(seller)s
+        WHERE f.id=%(f)s AND i.seller_id=%(seller)s{synthetic_clause}
     """, {"f": funding_id, "seller": ctx.supplier_user_id})
     if not row:
         return Response("Contract not found", status_code=404)
@@ -578,11 +579,15 @@ def _page(req, message="", error="", payload="", issues=None):
     rows = []
     if _HAS_DB:
         try:
-            rows = fetch_all("""
+            from utils.access import context_for
+            ctx = context_for(req)
+            synthetic_clause = " AND i.is_synthetic=TRUE" if ctx.is_synthetic else ""
+            rows = fetch_all(f"""
                 SELECT i.invoice_number, i.debtor_name, i.amount, i.currency, f.id funding_id
                 FROM factorio.invoices i JOIN factorio.invoice_funding f ON f.invoice_id=i.id
+                WHERE i.seller_id=%(seller)s{synthetic_clause}
                 ORDER BY f.created_at DESC LIMIT 8
-            """)
+            """, {"seller": ctx.supplier_user_id})
         except Exception:
             pass
     recent = Div(*[

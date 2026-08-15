@@ -9,10 +9,12 @@ from unittest.mock import patch
 
 from app_routes import depth
 from app_routes import marketplace
+from app_routes import origination
 from app_routes import team
 from app_routes import integrations
 from app_routes._shared import current_investor, role_preview
-from utils.access import AccessContext, context_for, preview_request_allowed
+from app_routes.shell import _topbar
+from utils.access import AccessContext, _CONTEXT, context_for, preview_request_allowed
 
 
 class RbacTests(unittest.TestCase):
@@ -33,6 +35,53 @@ class RbacTests(unittest.TestCase):
         self.assertEqual(req.session["uid"], "kaljuvee@gmail.com")
         self.assertEqual(req.session["preview_role"], "supplier")
         audit.assert_called_once()
+
+    def test_admin_topbar_renders_all_four_preview_choices(self):
+        ctx = AccessContext(email="kaljuvee@gmail.com", name="Julian",
+                            actual_role="admin", effective_role="admin", status="active",
+                            is_verified=True, csrf_token="token")
+        marker = _CONTEXT.set(ctx)
+        try:
+            rendered = str(_topbar("en", "admin", None, [], "/app"))
+        finally:
+            _CONTEXT.reset(marker)
+        for label in ("Admin", "Supplier", "Investor", "Payer"):
+            self.assertIn(f">{label}<", rendered)
+        self.assertIn('aria-label="Viewing as"', rendered)
+
+    def test_supplier_recent_demands_are_scoped_for_two_suppliers(self):
+        records = {
+            11: {"invoice_number": "SUPPLIER-A-ONLY", "debtor_name": "A Debtor",
+                 "amount": 100, "currency": "GBP", "funding_id": 1},
+            22: {"invoice_number": "SUPPLIER-B-ONLY", "debtor_name": "B Debtor",
+                 "amount": 200, "currency": "EUR", "funding_id": 2},
+        }
+
+        def render_for(supplier_id: int, synthetic: bool = False) -> str:
+            ctx = AccessContext(email=f"supplier-{supplier_id}@example.test",
+                                actual_role="supplier", effective_role="supplier",
+                                status="active", is_verified=True,
+                                supplier_user_id=supplier_id, is_synthetic=synthetic)
+
+            def scoped_fetch(query, params):
+                self.assertIn("WHERE i.seller_id=%(seller)s", query)
+                self.assertEqual(params, {"seller": supplier_id})
+                self.assertEqual("i.is_synthetic=TRUE" in query, synthetic)
+                return [records[params["seller"]]]
+
+            with patch("utils.access.context_for", return_value=ctx), \
+                 patch.object(origination, "fetch_all", side_effect=scoped_fetch), \
+                 patch.object(origination, "current_subrole", return_value="ops"), \
+                 patch.object(origination, "app_page",
+                              side_effect=lambda title, *content, **kwargs: (title, *content)):
+                return "".join(map(str, origination._page(self.request(ctx.email))))
+
+        supplier_a = render_for(11)
+        supplier_b = render_for(22, synthetic=True)
+        self.assertIn("SUPPLIER-A-ONLY", supplier_a)
+        self.assertNotIn("SUPPLIER-B-ONLY", supplier_a)
+        self.assertIn("SUPPLIER-B-ONLY", supplier_b)
+        self.assertNotIn("SUPPLIER-A-ONLY", supplier_b)
 
     def test_non_admin_cannot_start_preview(self):
         req = self.request("supplier@example.com")
@@ -81,6 +130,8 @@ class RbacTests(unittest.TestCase):
         self.assertFalse(preview_request_allowed(
             ctx, "/app/marketplace/auctions/bid", "POST"))
         self.assertFalse(preview_request_allowed(ctx, "/app/auto-invest", "POST"))
+        self.assertTrue(preview_request_allowed(ctx, "/app/role-preview", "POST"))
+        self.assertTrue(preview_request_allowed(ctx, "/app/preview-exit", "POST"))
         self.assertTrue(preview_request_allowed(ctx, "/app/chat/share", "POST"))
 
     def test_session_version_change_revokes_existing_session(self):
@@ -138,9 +189,12 @@ class RbacTests(unittest.TestCase):
         req = self.request("buyer@example.com")
         req.session["csrf_token"] = "token"
         buyer = {"id": 7, "email": "buyer@example.com"}
+        ctx = AccessContext(email="buyer@example.com", actual_role="investor",
+                            effective_role="investor", status="active", is_verified=True)
         with patch.object(depth, "_HAS_DB", True), \
              patch.object(depth, "list_investors", return_value=[buyer]), \
              patch.object(depth, "current_investor", return_value=buyer), \
+             patch("utils.access.context_for", return_value=ctx), \
              patch.object(depth, "connect", return_value=Connection()):
             response = depth.secondary_buy(req, listing_id=3, csrf="token")
         self.assertEqual(response.status_code, 303)
@@ -242,10 +296,13 @@ class RbacTests(unittest.TestCase):
 
         investor = {"id": 7, "email": "buyer@example.com"}
         req = self.request("buyer@example.com")
+        ctx = AccessContext(email="buyer@example.com", actual_role="investor",
+                            effective_role="investor", status="active", is_verified=True)
         with patch.object(depth, "_HAS_DB", True), \
              patch.object(depth, "_ensure"), \
              patch.object(depth, "list_investors", return_value=[investor]), \
              patch.object(depth, "current_investor", return_value=investor), \
+             patch("utils.access.context_for", return_value=ctx), \
              patch.object(depth, "connect", return_value=Connection()):
             asyncio.run(depth.auctions_bid(req, funding_id=999, bid_fee_pct=1, bid_advance_pct=80))
         self.assertIn("funding_status='open'", statements[0])

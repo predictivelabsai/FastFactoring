@@ -75,7 +75,7 @@ def auctions(req):
         _ensure()
     except Exception:
         pass
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     rows = fetch_all("""
         SELECT f.id AS funding_id, i.debtor_name, i.sector, i.amount AS invoice_amount,
@@ -137,7 +137,9 @@ def auctions(req):
 
 @rt("/app/marketplace/auctions/bid", methods=["POST"])
 async def auctions_bid(req, funding_id: int = 0, bid_fee_pct: float = 0.0, bid_advance_pct: float = 0.0):
-    investors = list_investors()
+    from utils.access import context_for
+    ctx = context_for(req)
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     if _HAS_DB and investor and funding_id and 0 <= bid_fee_pct <= 100 and 0 <= bid_advance_pct <= 100:
         try:
@@ -145,13 +147,15 @@ async def auctions_bid(req, funding_id: int = 0, bid_fee_pct: float = 0.0, bid_a
             with connect() as conn, conn.transaction():
                 with conn.cursor() as cur:
                     cur.execute(
-                        """SELECT id FROM factorio.invoice_funding
-                             WHERE id=%s AND funding_status='open'
+                        """SELECT f.id,i.is_synthetic FROM factorio.invoice_funding f
+                             JOIN factorio.invoices i ON i.id=f.invoice_id
+                             WHERE f.id=%s AND f.funding_status='open'
                                AND show_in_marketplace=TRUE
                              FOR UPDATE""",
                         (funding_id,),
                     )
-                    if cur.fetchone():
+                    target = cur.fetchone()
+                    if target and (not ctx.is_synthetic or target[1]):
                         cur.execute(
                             """INSERT INTO factorio.auction_bids
                                       (funding_id,investor_id,bid_fee_pct,bid_advance_pct)
@@ -168,7 +172,7 @@ async def auctions_bid(req, funding_id: int = 0, bid_fee_pct: float = 0.0, bid_a
 @rt("/app/marketplace/secondary")
 def secondary(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
 
     listed = fetch_all("""
@@ -248,13 +252,20 @@ def secondary(req):
 
 @rt("/app/marketplace/secondary/list", methods=["POST"])
 async def secondary_list(req, investment_id: int = 0, price: float = 0.0):
-    investors = list_investors()
+    from utils.access import context_for
+    ctx = context_for(req)
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     if _HAS_DB and investor and investment_id and price > 0:
         try:
-            own = fetch_one("SELECT 1 FROM factorio.investments WHERE id=%(i)s AND investor_id=%(v)s",
-                            {"i": investment_id, "v": investor["id"]})
-            if own:
+            own = fetch_one(
+                """SELECT i.is_synthetic FROM factorio.investments x
+                     JOIN factorio.invoice_funding f ON f.id=x.funding_id
+                     JOIN factorio.invoices i ON i.id=f.invoice_id
+                    WHERE x.id=%(i)s AND x.investor_id=%(v)s""",
+                {"i": investment_id, "v": investor["id"]},
+            )
+            if own and (not ctx.is_synthetic or own["is_synthetic"]):
                 execute("""INSERT INTO factorio.secondary_market (investor_id,investment_id,listing_price,status)
                            VALUES (%(v)s,%(i)s,%(p)s,'listed')""",
                         {"v": investor["id"], "i": investment_id, "p": price})
@@ -266,21 +277,28 @@ async def secondary_list(req, investment_id: int = 0, price: float = 0.0):
 @rt("/app/marketplace/secondary/buy", methods=["POST"])
 def secondary_buy(req, listing_id: int = 0, csrf: str = ""):
     import hmac
+    from utils.access import context_for
     if not csrf or not hmac.compare_digest(str(req.session.get("csrf_token") or ""), csrf):
         return RedirectResponse("/app", status_code=303)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
+    ctx = context_for(req)
     if _HAS_DB and investor and listing_id:
         try:
             with connect() as conn, conn.transaction():
                 with conn.cursor() as cur:
                     cur.execute(
-                        """SELECT investor_id,investment_id FROM factorio.secondary_market
-                             WHERE id=%s AND status='listed' FOR UPDATE""",
+                        """SELECT s.investor_id,s.investment_id,i.is_synthetic
+                             FROM factorio.secondary_market s
+                             JOIN factorio.investments x ON x.id=s.investment_id
+                             JOIN factorio.invoice_funding f ON f.id=x.funding_id
+                             JOIN factorio.invoices i ON i.id=f.invoice_id
+                            WHERE s.id=%s AND s.status='listed' FOR UPDATE""",
                         (listing_id,),
                     )
                     listing = cur.fetchone()
-                    if listing and listing[0] != investor["id"]:
+                    if (listing and listing[0] != investor["id"]
+                            and (not ctx.is_synthetic or listing[2])):
                         cur.execute(
                             "UPDATE factorio.secondary_market SET status='sold' WHERE id=%s AND status='listed'",
                             (listing_id,),

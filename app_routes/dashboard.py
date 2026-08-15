@@ -106,7 +106,7 @@ def _activity_feed(notes: list[dict], lang: str):
 @rt("/app/dashboard")
 def dashboard(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     positions = _load_positions(investor["id"]) if investor else []
     m = _compute(positions)

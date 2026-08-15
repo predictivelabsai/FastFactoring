@@ -206,7 +206,7 @@ def _invoice_card(row: dict, lang: str):
 @rt("/app/marketplace")
 def marketplace(req):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     fl = _parse_filters(req)
     listings = _load_marketplace(fl)
@@ -238,7 +238,7 @@ def marketplace(req):
 @rt("/app/marketplace/{funding_id:int}")
 def marketplace_detail(req, funding_id: int):
     lang = get_lang(req)
-    investors = list_investors()
+    investors = list_investors(req)
     investor = current_investor(req, investors)
     if not _HAS_DB:
         return app_page("Not found", Section_(P("Database not configured.")),
@@ -360,7 +360,7 @@ def marketplace_invest(req, funding_id: int = 0, amount: float = 0, csrf: str = 
     import hmac
     from utils.access import audit, context_for
     ctx = context_for(req)
-    investor = current_investor(req, list_investors())
+    investor = current_investor(req, list_investors(req))
     expected = str(req.session.get("csrf_token") or "")
     if (ctx.effective_role != "investor" or not investor or amount <= 0 or
             not expected or not hmac.compare_digest(expected, csrf)):
@@ -375,9 +375,9 @@ def marketplace_invest(req, funding_id: int = 0, amount: float = 0, csrf: str = 
                               AND f.show_in_marketplace=TRUE
                             FOR UPDATE""", (funding_id,))
             row = cur.fetchone()
-            if not row or (ctx.preview and not row[3]):
+            if not row or (ctx.is_synthetic and not row[3]):
                 conn.rollback()
-                audit(ctx, "investment_denied", str(funding_id), "target_not_synthetic_or_open")
+                audit(ctx, "investment_denied", str(funding_id), "target_not_synthetic_visible_or_open")
                 return RedirectResponse("/app/marketplace", status_code=303)
             remaining = float(row[0]) - float(row[1])
             placed = min(float(amount), remaining)

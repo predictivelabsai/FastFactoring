@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-08-15 — v2.0.1
+
+- Fixed FastFactoring and Factorio authentication branding, the admin top bar, and reliable admin preview switching and exit.
+- Bound Supplier, Investor, and Payer demo actions to synthetic records, including the Factorio Supplier company scope.
+- Resolved investor identities from each request across marketplace, portfolio, statements, auctions, and auto-invest views.
+- Added an isolated real-Chrome suite covering registration, verification, password reset, Team governance, all role previews, and Factorio demos.
+
 ## 2026-08-15 — v2.0.0
 
 - Replaced session-carried roles with database-backed access profiles, exact Supplier, Investor, Payer, and sole-admin authorization, plus record-level supplier, investor, and payer scopes.
