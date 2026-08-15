@@ -81,6 +81,7 @@ def landing_page(lang: str = "en"):
                     A("Demo", href=DEMO_URL, cls="ff-nav-link"),
                     _language_switcher(lang, "/fastfactoring"),
                     A("View on GitHub", href=REPOSITORY_URL, cls="ff-button secondary"),
+                    A("Sign in", href="/login", cls="ff-button primary"),
                     cls="ff-nav-actions",
                 ),
                 cls="ff-nav",

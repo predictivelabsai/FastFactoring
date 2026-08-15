@@ -55,6 +55,7 @@ class PublicFlowTests(unittest.TestCase):
             "/fastfactoring", headers={"accept-language": "de-DE,de;q=0.9"}
         )
         self.assertEqual(response.status_code, 200)
+        self.assertIn('href="/login"', response.text)
         self.assertIn("FastFactoring", response.text)
         self.assertIn('lang="de"', response.text)
         self.assertIn("https://factorio.co.uk/", response.text)
