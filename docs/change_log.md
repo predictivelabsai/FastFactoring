@@ -1,5 +1,9 @@
 # Change Log
 
+## 2026-11-08 — v2.0.2
+
+- Fixed the home page HTTP 500 by letting the shared section wrapper accept an id and other HTML attributes.
+
 ## 2026-08-15 — v2.0.1
 
 - Fixed FastFactoring and Factorio authentication branding, the admin top bar, and reliable admin preview switching and exit.

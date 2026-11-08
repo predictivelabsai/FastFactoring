@@ -243,8 +243,8 @@ def page(title: str, *content, current_path: str = "/", lang: str = DEFAULT_LANG
 
 # ---- Higher-level blocks ------------------------------------------------
 
-def Section_(*content, cls: str = ""):
-    return Section(Div(*content, cls="max-w-7xl mx-auto px-5 md:px-6"), cls=f"py-14 md:py-20 lg:py-24 {cls}".strip())
+def Section_(*content, cls: str = "", **attrs):
+    return Section(Div(*content, cls="max-w-7xl mx-auto px-5 md:px-6"), cls=f"py-14 md:py-20 lg:py-24 {cls}".strip(), **attrs)
 
 
 def _StatCell(value: str, caption: str):
